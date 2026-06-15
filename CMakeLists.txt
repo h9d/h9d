@@ -1,51 +1,50 @@
-cmake_minimum_required(VERSION 3.8)
-project(h9)
+cmake_minimum_required(VERSION 3.7)
 
-INCLUDE(FindPkgConfig)
+project(h9 VERSION 0.2.0)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
-set(H9D_CONFIG_FILE "./h9d.cfg")
-set(H9_VERSION "0.1.0")
+set(H9_USER_CONFIG_FILE "~/.h9")
+set(H9_CONFIG_PATH "../conf/")
+set(H9_VERSION ${PROJECT_VERSION})
 
-find_package(LibXml2 REQUIRED)
+find_package(PkgConfig REQUIRED)
+find_package(FLEX 2.6.1 REQUIRED)
+find_package(BISON 3.3.2 REQUIRED)
 
-pkg_check_modules(confuse libconfuse)
-pkg_check_modules(libxml2 libxml-2.0)
+pkg_check_modules(CONFUSE libconfuse REQUIRED)
+pkg_check_modules(LIBXML2 libxml-2.0 REQUIRED)
+pkg_check_modules(READLINE readline>=8.0)
+
+if(NOT READLINE_FOUND)
+    message(STATUS "Checking for module 'readline>=7.0'")
+    include(cmake/FindReadline.cmake)
+    if(Readline_VERSION VERSION_GREATER_EQUAL "7.0") 
+	    message(STATUS "  Found readline ${Readline_VERSION}")
+    else()
+	    message(FATAL_ERROR "  No package 'readline' found")
+    endif()
+    set(READLINE_LIBRARIES ${Readline_LIBRARIES})
+    set(READLINE_INCLUDE_DIRS ${Readline_INCLUDE_DIRS})
+endif()
+
+find_program(XXD_EXECUTABLE xxd)
 
 configure_file(config.h.in config.h)
 
-include_directories(/usr/local/include/ ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${LIBXML2_INCLUDE_DIR})
-link_directories(/usr/local/lib/)
+include_directories(${CMAKE_SOURCE_DIR}/thirdparty/ ${CMAKE_SOURCE_DIR})
 
-add_custom_command (
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/h9msg.xsd.h
-        COMMAND xxd -i h9msg.xsd ${CMAKE_CURRENT_BINARY_DIR}/h9msg.xsd.h
-        DEPENDS h9msg.xsd
-)
+link_directories(/usr/local/lib/ /opt/local/lib/)
 
-set(H9_LOG_FILES h9_log.c h9_log.h)
-set(H9_MSG_FILES h9_xmlmsg.c h9_xmlmsg.h h9msg.xsd.h h9msg.c h9msg.h)
-set(H9_XMLSOCKET_FILES h9_xmlsocket.c h9_xmlsocket.h)
-set(H9_DEVS h9_devs/slcan.c h9_devs/slcan.h h9_devs/h9_dev.c h9_devs/h9_dev.h h9_devs/loop.c h9_devs/loop.h)
-
-set(H9D_FILES h9d.c h9d_cfg.c h9d_cfg.h h9d_select_event.c h9d_select_event.h h9d_server.c h9d_server.h h9d_client.c h9d_client.h h9d_endpoint.c h9d_endpoint.h h9d_trigger.c h9d_trigger.h h9d_metricses.c h9d_metricses.h)
-set(H9FW_FILES h9fw.c)
-set(H9SEND_FILES h9send.c)
-set(H9SPY_FILES h9spy.c)
-set(H9STATS_FILES h9stats.cc)
-
-add_executable(h9d ${H9D_FILES} ${H9_LOG_FILES} ${H9_MSG_FILES} ${H9_XMLSOCKET_FILES} ${H9_DEVS})
-TARGET_LINK_LIBRARIES(h9d ${confuse_LIBRARIES} ${libxml2_LIBRARIES})
-
-add_executable(h9fw ${H9FW_FILES} ${H9_LOG_FILES} ${H9_MSG_FILES} ${H9_XMLSOCKET_FILES})
-TARGET_LINK_LIBRARIES(h9fw ${libxml2_LIBRARIES})
-
-add_executable(h9send ${H9SEND_FILES} ${H9_LOG_FILES} ${H9_MSG_FILES} ${H9_XMLSOCKET_FILES})
-TARGET_LINK_LIBRARIES(h9send ${libxml2_LIBRARIES})
-
-add_executable(h9spy ${H9SPY_FILES} ${H9_LOG_FILES} ${H9_MSG_FILES} ${H9_XMLSOCKET_FILES})
-TARGET_LINK_LIBRARIES(h9spy ${libxml2_LIBRARIES})
-
-add_executable(h9stats ${H9STATS_FILES} ${H9_LOG_FILES} ${H9_MSG_FILES} ${H9_XMLSOCKET_FILES})
-TARGET_LINK_LIBRARIES(h9stats ${libxml2_LIBRARIES})
+add_subdirectory(bus)
+add_subdirectory(protocol)
+add_subdirectory(drivers)
+add_subdirectory(common)
+add_subdirectory(devices)
+add_subdirectory(h9bus)
+add_subdirectory(h9cli)
+add_subdirectory(h9d)
+add_subdirectory(h9fwu)
+add_subdirectory(h9send)
+add_subdirectory(h9sniffer)
+add_subdirectory(h9stat)
