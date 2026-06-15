@@ -20,10 +20,14 @@ void cfg_err_func(cfg_t* cfg, const char* fmt, va_list args) {
 }
 
 int validate_node_id(cfg_t* cfg, cfg_opt_t* opt) {
-    auto id = cfg_opt_getnint(opt, cfg_opt_size(opt) - 1);
-    if (id < 0 || id > H9frame::H9FRAME_SOURCE_ID_MAX_VALUE) {
-        cfg_error(cfg, "option '%s' in section '%s' must have a value between 0-%d", opt->name, cfg->name, H9frame::H9FRAME_SOURCE_ID_MAX_VALUE);
-        return -1;
+    auto ids = cfg_opt_size(opt);
+
+    for (auto idx = 0; idx < ids; ++idx) {
+        auto id = cfg_opt_getnint(opt, idx);
+        if (id < 0 || id > H9frame::H9FRAME_SOURCE_ID_MAX_VALUE) {
+            cfg_error(cfg, "option '%s' in section '%s' must have a value between 0-%d", opt->name, cfg->name, H9frame::H9FRAME_SOURCE_ID_MAX_VALUE);
+            return -1;
+        }
     }
 
     return 0;
@@ -48,7 +52,10 @@ int validate_node_register_type(cfg_t* cfg, cfg_opt_t* opt) {
         return 0;
     else if (strcmp(type, "bool") == 0)
         return 0;
-
+    else if (strcmp(type, "char") == 0)
+        return 0;
+    else if (strcmp(type, "float") == 0)
+        return 0;
     cfg_error(cfg, "invalid value for option '%s' in section '%s': %s", opt->name, cfg->name, type);
     return -1;
 }

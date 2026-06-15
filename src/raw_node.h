@@ -3,7 +3,7 @@
  *
  * Created by SQ8KFH on 2020-11-08.
  *
- * Copyright (C) 2020-2023 Kamil Palkowski. All rights reserved.
+ * Copyright (C) 2020-2024 Kamil Palkowski. All rights reserved.
  */
 
 #ifndef H9_RAW_NODE_H
@@ -18,12 +18,13 @@
 #include <spdlog/spdlog.h>
 #include <tuple>
 
+#include "h9errno.h"
 #include "frameobserver.h"
 
-class NodeDevMgr;
+class NodeMgr;
 class Bus;
 
-class RawNode: public FrameObserver {
+class RawNode {
   private:
     class FramePromise {
         RawNode* const node;
@@ -45,14 +46,12 @@ class RawNode: public FrameObserver {
                 if (comparator_has_seqnum) {
                     try {
                         promise.set_value(frame);
-                    }
-                    catch (std::future_error& e) {
+                    } catch (std::future_error& e) {
                         SPDLOG_CRITICAL("{}", e.what());
                         throw;
                     }
                     return true;
-                }
-                else {
+                } else {
                     frame_storage.push(frame);
                 }
             }
@@ -79,40 +78,36 @@ class RawNode: public FrameObserver {
         }
     };
 
-    NodeDevMgr* const node_mgr;
     Bus* const bus;
 
     std::mutex frame_promise_set_mtx;
     std::set<FramePromise*> frame_promise_set;
 
-    void on_frame_recv(const ExtH9Frame& frame) override;
-    void on_frame_send(const ExtH9Frame& frame) override;
     FramePromise* create_frame_promise(H9FrameComparator comparator);
     void destroy_frame_promise(FramePromise* frame_promise);
 
     ssize_t bit_operation(const std::string& origin, H9frame::Type type, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
 
   protected:
-    const std::uint16_t _node_id;
-    RawNode(NodeDevMgr* node_mgr, Bus* bus, std::uint16_t node_id) noexcept;
+    NodeMgr* const node_mgr;
 
-    friend NodeDevMgr;
+    const std::uint16_t _node_id;
+    RawNode(NodeMgr* node_mgr, Bus* bus, std::uint16_t node_id) noexcept;
+
+    friend NodeMgr;
 
   public:
-    constexpr static std::uint8_t REG_NODE_TYPE = 1;
-    constexpr static std::uint8_t REG_NODE_VERSION = 2;
-    constexpr static std::uint8_t REG_NODE_METADATA = 3;
-    constexpr static std::uint8_t REG_NODE_ID = 4;
-    constexpr static std::uint8_t REG_NODE_MCU_TYPE = 5;
-
-    constexpr static ssize_t TIMEOUT_ERROR = -1000;
-    constexpr static ssize_t MALFORMED_FRAME_ERROR = -1001;
+    constexpr static ssize_t TIMEOUT_ERROR = -std::to_underlying(h9errno::TIMEOUT_ERROR);
+    constexpr static ssize_t MALFORMED_FRAME_ERROR = -std::to_underlying(h9errno::MALFORMED_FRAME_ERROR);
 
     ~RawNode() = default;
+
+    void on_frame_recv(const ExtH9Frame& frame);
 
     std::uint16_t node_id() const noexcept;
 
     ssize_t reset(const std::string& origin);
+    ssize_t discovery(const std::string& origin, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision);
 
     int32_t get_node_type(const std::string& origin) noexcept;
     int64_t get_node_version(const std::string& origin, std::uint16_t* major = nullptr, std::uint16_t* minor = nullptr, std::uint16_t* patch = nullptr) noexcept;
@@ -128,6 +123,7 @@ class RawNode: public FrameObserver {
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::uint8_t reg_val, std::uint8_t* reg_after_set = nullptr);
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::uint16_t reg_val, std::uint16_t* reg_after_set = nullptr);
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::uint32_t reg_val, std::uint32_t* reg_after_set = nullptr);
+    ssize_t set_reg(const std::string& origin, std::uint8_t reg, float reg_val, float* reg_after_set = nullptr);
 
     /// Read registry from the node
     /// @param[in] origin client idstring
@@ -141,6 +137,9 @@ class RawNode: public FrameObserver {
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, std::uint8_t* reg_val);
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, std::uint16_t* reg_val);
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, std::uint32_t* reg_val);
+    ssize_t get_reg(const std::string& origin, std::uint8_t reg, float* reg_val);
+
+    static int parse_node_info_frame(const ExtH9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason);
 };
 
 #endif // H9_RAW_NODE_H

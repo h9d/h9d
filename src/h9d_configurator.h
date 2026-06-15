@@ -14,7 +14,7 @@
 #include <string>
 
 #include "bus.h"
-#include "node_dev_mgr.h"
+#include "node_mgr.h"
 #include "tcpserver.h"
 #include "virtual_endpoint.h"
 
@@ -30,7 +30,8 @@ class H9dConfigurator {
     constexpr static char vendpoint_logger_name[] = "vend";
 
     constexpr static int default_source_id = 509;
-    constexpr static int default_response_timeout_duration = 5;
+    constexpr static int default_response_timeout = 5;
+    constexpr static int devs_workers = 5;
   private:
     constexpr static char log_debug_pattern[] = "%^[%L %T.%e] [%n:%t] [%s:%#]%$ %v";
     constexpr static char log_pattern[] = "%^[%L %T.%e] [%n:%t]%$ %v";
@@ -63,7 +64,7 @@ class H9dConfigurator {
 
     void configure_bus(Bus* bus, VirtualEndpoint* vendpoint);
     void configure_virtual_endpoint(VirtualEndpoint* vendpoint);
-    void configure_devices_mgr(NodeDevMgr* devices_mgr);
+    void configure_devices_mgr(NodeMgr* devices_mgr);
     void configure_tcpserver(TCPServer* server);
 
     static std::string version_string();

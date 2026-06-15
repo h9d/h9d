@@ -38,6 +38,10 @@ void TCPClientThread::thread() {
     // execadapter.cleanup_connection();
     SPDLOG_LOGGER_TRACE(logger, "Client ({}) thread finish.", get_client_idstring());
     thread_running = false;
+
+    if (_frame_observer) _frame_observer->detach();
+    if (_dev_status_observer) _dev_status_observer->detach();
+
     server->cleanup_tcpclientthread(this);
 }
 
@@ -57,13 +61,11 @@ void TCPClientThread::thread_recv_msg() {
 
     if (json.is_discarded()) {
         SPDLOG_LOGGER_ERROR(logger, "Recv invalid JSON from client: {}.", get_client_idstring().c_str());
-
+        SPDLOG_LOGGER_DEBUG(logger, "{} => {}.", get_client_idstring().c_str(), json.dump());
         h9socket.send(jsonrpcpp::ParseErrorException("").to_json());
         return;
     }
-    else {
-        SPDLOG_LOGGER_TRACE(logger, "Recv JSON from client: {}: {}.", get_client_idstring().c_str(), json.dump());
-    }
+
     jsonrpcpp::Parser parser;
     jsonrpcpp::entity_ptr msg;
     try {
@@ -71,6 +73,7 @@ void TCPClientThread::thread_recv_msg() {
     }
     catch (const jsonrpcpp::RpcException& e) {
         SPDLOG_LOGGER_ERROR(logger, "Recv invalid JSONRPC from client: {}: {}.", get_client_idstring().c_str(), e.what());
+        SPDLOG_LOGGER_DEBUG(logger, "{} => {}.", get_client_idstring().c_str(), json.dump());
         h9socket.send(jsonrpcpp::ParseErrorException(e.what()).to_json());
         return;
     }
@@ -79,20 +82,24 @@ void TCPClientThread::thread_recv_msg() {
         jsonrpcpp::request_ptr request = std::dynamic_pointer_cast<jsonrpcpp::Request>(msg);
 
         SPDLOG_LOGGER_DEBUG(logger, "Recv request (id: {}) - execute method '{}' from client {}", request->id().int_id(), request->method(), get_client_idstring().c_str());
+        SPDLOG_LOGGER_TRACE(logger, "{} => {}.", get_client_idstring().c_str(), request->to_json().dump());
 
         try {
             jsonrpcpp::Response response = api->call(this, request);
             h9socket.send(response.to_json());
             SPDLOG_LOGGER_DEBUG(logger, "Sent response (id: {}) - method '{}' to client {}", response.id().int_id(), request->method(), get_client_idstring().c_str());
+            SPDLOG_LOGGER_TRACE(logger, "{} <= {}.", get_client_idstring().c_str(), response.to_json().dump());
         }
         catch (const jsonrpcpp::RequestException& e) {
             h9socket.send(e.to_json());
             SPDLOG_LOGGER_WARN(logger, "Sent error response (id: {}) - method '{}' to client {}: {}", e.id().int_id(), request->method(), get_client_idstring().c_str(), e.what());
+            SPDLOG_LOGGER_TRACE(logger, "{} <= {}.", get_client_idstring().c_str(), e.to_json().dump());
         }
     }
     else if (msg && msg->is_batch()) {
         jsonrpcpp::batch_ptr batch = std::dynamic_pointer_cast<jsonrpcpp::Batch>(msg);
         SPDLOG_LOGGER_DEBUG(logger, "Recv batch from client {}", get_client_idstring().c_str());
+        SPDLOG_LOGGER_TRACE(logger, "{} => {}.", get_client_idstring().c_str(), batch->to_json().dump());
 
         jsonrpcpp::Batch response_batch;
         for (const auto& batch_entity : batch->entities) {
@@ -115,7 +122,7 @@ void TCPClientThread::thread_recv_msg() {
     }
     else {
         SPDLOG_LOGGER_ERROR(logger, "Recv not supported JSON-RPC object from client: {}", get_client_idstring().c_str());
-        SPDLOG_LOGGER_DEBUG(logger, "Dump not supported JSON-RPC object: {}.", json.dump());
+        SPDLOG_LOGGER_DEBUG(logger, "{} => {}.", get_client_idstring().c_str(), json.dump());
 
         h9socket.send(jsonrpcpp::ParseErrorException("The JSON sent is not supported object.").to_json());
     }
@@ -167,8 +174,7 @@ TCPClientThread::TCPClientThread(int sockfd, API* api, TCPServer* server):
 }
 
 TCPClientThread::~TCPClientThread() {
-    SPDLOG_LOGGER_TRACE(logger, "~TCPClientThread() {}", fmt::ptr(this));
-    SPDLOG_LOGGER_DEBUG(logger, "Cleaning client ({}) data...", get_client_idstring());
+    SPDLOG_LOGGER_DEBUG(logger, "Cleaning client ({}) data... [this={}]", get_client_idstring(), fmt::ptr(this));
     delete _frame_observer;
     delete _dev_status_observer;
 
@@ -176,6 +182,7 @@ TCPClientThread::~TCPClientThread() {
     if (client_thread_desc.joinable())
         client_thread_desc.join();
     h9socket.close();
+    SPDLOG_LOGGER_TRACE(logger, "~TCPClientThread() [this={}]", fmt::ptr(this));
 }
 
 void TCPClientThread::set_frame_observer(ClientFrameObs* frame_observer) {

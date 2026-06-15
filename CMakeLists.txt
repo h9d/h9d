@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(h9 VERSION 0.3.0)
+project(h9 VERSION 0.3.1)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 
 option(H9_DEBUG "Enable debug")
 
@@ -36,6 +36,16 @@ if(NOT READLINE_FOUND)
     set(READLINE_INCLUDE_DIRS ${Readline_INCLUDE_DIRS})
 endif()
 
+if (DEFINED ENV{H9CAN_PATH})
+    set(H9CAN_PATH $ENV{H9CAN_PATH})
+    message("H9CAN_PATH is: " ${H9CAN_PATH})
+else ()
+    set(H9CAN_PATH ${PROJECT_SOURCE_DIR}/h9can)
+    message("H9CAN_PATH not set, using local: " ${H9CAN_PATH})
+endif ()
+
+include(${H9CAN_PATH}/cmake/unix.cmake)
+
 include_directories(${CMAKE_SOURCE_DIR}/thirdparty/ ${CMAKE_CURRENT_BINARY_DIR}/src/)
 
 link_directories(/usr/local/lib/ /opt/local/lib/)
@@ -44,7 +54,8 @@ add_subdirectory(src)
 
 install(FILES conf/h9d.conf DESTINATION /etc/h9)
 install(FILES conf/h9.conf DESTINATION /etc/h9)
-install(FILES conf/devices.conf DESTINATION /etc/h9)
+install(FILES conf/nodes.conf DESTINATION /etc/h9)
+install(FILES conf/dev.conf DESTINATION /etc/h9)
 install(FILES systemd/h9d.service DESTINATION /etc/systemd/system)
 install(DIRECTORY virtual_node DESTINATION lib/h9)
 install(DIRECTORY DESTINATION /var/log/h9)

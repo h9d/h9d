@@ -3,52 +3,111 @@
  *
  * Created by SQ8KFH on 2020-11-23.
  *
- * Copyright (C) 2020-2021 Kamil Palkowski. All rights reserved.
+ * Copyright (C) 2020-2024 Kamil Palkowski. All rights reserved.
  */
 
 #include "node.h"
 
 #include <cassert>
 
+#include <h9def.h>
+
 #include "dev_node_exception.h"
 #include "h9d_configurator.h"
 #include "tcpclientthread.h"
+#include "dev.h"
 
 NodeDescLoader Node::nodedescloader;
 
-void Node::update_node_last_seen_time() noexcept {
-    _last_seen_time = std::time(nullptr);
+void Node::update_node_last_seen_time(timestamp_t timestamp) noexcept {
+    _last_seen_time = timestamp;
 }
 
-Node::Node(NodeDevMgr* node_mgr, Bus* bus, std::uint16_t node_id, std::uint16_t node_type, std::uint64_t node_version) noexcept:
+Node::Node(NodeMgr* node_mgr, Bus* bus, std::uint16_t node_id) noexcept:
     RawNode(node_mgr, bus, node_id),
-    // Node(std::move(node)),
-    _device_type(node_type),
-    _device_version(node_version),
-    _device_name("unknown"),
-    _device_description(""),
-    _created_time(std::time(nullptr)) {
+    _node_type(0),
+    _node_version(0),
+    _node_name("unknown"),
+    _node_description(""),
+    _created_time(timestamp_t::clock::now()),
+    _init(false) {
     logger = spdlog::get(H9dConfigurator::nodes_logger_name);
 
-    SPDLOG_LOGGER_INFO(logger, "Create device descriptor: id: {} type: {} version: {}.{}.{}.", node_id, node_type,
-                       device_version_major(), device_version_minor(), device_version_patch());
+    SPDLOG_LOGGER_INFO(logger, "Create node descriptor: id: {}.", node_id);
 
-    _last_seen_time = _created_time;
+    //_last_seen_time = _created_time;
+}
 
-    if (nodedescloader.get_node_name_by_type(node_type) != "") {
-        _device_name = nodedescloader.get_node_name_by_type(node_type);
-        _device_description = nodedescloader.get_node_description_by_type(node_type);
+void Node::init(std::uint16_t node_type, std::uint32_t node_version, char hardware_revision, std::uint8_t reset_reason) {
+    _reset_reason = reset_reason;
+
+    _init = true;
+
+    if (_node_type == node_type && _node_version == node_version && _hardware_revision == hardware_revision)
+        return;
+
+    _node_version = node_version;
+    _hardware_revision = hardware_revision;
+    _reset_reason = reset_reason;
+
+    if (_node_type == 0) {
+        SPDLOG_LOGGER_INFO(logger, "Init node id: {} type: {} version: {}.{}{}.", _node_id, node_type, node_version_major(), node_version_minor(), _hardware_revision);
+    }
+    else if (_node_type != node_type) {
+        SPDLOG_LOGGER_WARN(logger, "Reinit node id: {} type: {} -> {} version: {}.{}{}.", _node_id, _node_type, node_type, node_version_major(), node_version_minor(), _hardware_revision);
+        register_map.clear();
+    }
+    else {
+        SPDLOG_LOGGER_INFO(logger, "Change version node id: {} type: {} version: {}.{}{}.", _node_id, node_type, node_version_major(), node_version_minor(), _hardware_revision);
     }
 
-    register_map[1] = {1, "Node type", "uint", 16, true, false, {}, ""};
-    register_map[2] = {2, "Node version", "uint", 48, true, false, {}, ""};
-    register_map[3] = {3, "Build metadata", "str", 48, true, false, {}, ""};
-    register_map[4] = {4, "Node id", "uint", 9, true, true, {}, ""};
-    register_map[5] = {5, "MCU type", "uint", 8, true, false, {}, ""};
+    _node_type = node_type;
 
-    for (const auto& it : nodedescloader.get_node_register_by_type(node_type)) {
+    load_description();
+}
+
+void Node::load_description() {
+    if (nodedescloader.get_node_name_by_type(_node_type) != "") {
+        _node_name = nodedescloader.get_node_name_by_type(_node_type);
+        _node_description = nodedescloader.get_node_description_by_type(_node_type);
+    }
+
+    register_map.clear();
+
+    register_map[NODE_TYPE_STD_REGISTER] = {NODE_TYPE_STD_REGISTER, "Node type", "uint", 16, true, false, {}, ""};
+    register_map[NODE_HARDWARE_REVISION_STD_REGISTER] = {NODE_HARDWARE_REVISION_STD_REGISTER, "Node hardware revision", "char", 8, true, false, {}, ""};
+    register_map[NODE_VERSION_STD_REGISTER] = {NODE_VERSION_STD_REGISTER, "Node version", "uint", 32, true, false, {}, ""};
+    register_map[NODE_BUILD_INFO_STD_REGISTER] = {NODE_BUILD_INFO_STD_REGISTER, "Build metadata", "str", 48, true, false, {}, ""};
+    register_map[NODE_ID_STD_REGISTER] = {NODE_ID_STD_REGISTER, "Node id", "uint", 9, true, true, {}, ""};
+    register_map[NODE_MCU_TYPE_STD_REGISTER] = {NODE_MCU_TYPE_STD_REGISTER, "MCU type", "uint", 8, true, false, {}, ""};
+    register_map[NODE_SN_STD_REGISTER] = {NODE_SN_STD_REGISTER, "MCU SN", "uint", 32, true, false, {}, ""};
+    register_map[NODE_RESET_REASON_STD_REGISTER] = {NODE_RESET_REASON_STD_REGISTER, "Node reset reason", "uint", 8, true, false, {}, ""};
+
+    for (const auto& it : nodedescloader.get_node_register_by_type(_node_type)) {
         register_map[it.first] = {it.second.number, it.second.name, it.second.type, it.second.size, it.second.readable, it.second.writable, it.second.bits_names, it.second.description};
     }
+}
+
+void Node::add_dependent_devices(Dev *dev) {
+    dependent_devices_mtx.lock();
+    dependent_devices.push_back(dev);
+    dependent_devices_mtx.unlock();
+}
+
+void Node::del_dependent_devices(Dev *dev) {
+    dependent_devices_mtx.lock();
+    dependent_devices.remove(dev);
+    dependent_devices_mtx.unlock();
+}
+
+void Node::on_frame_recv(const ExtH9Frame& frame) {
+    RawNode::on_frame_recv(frame);
+
+    dependent_devices_mtx.lock();
+    for (auto d: dependent_devices) {
+        node_mgr->dev_workers.update_dev_state(d, _node_id, frame);
+    }
+    dependent_devices_mtx.unlock();
 }
 
 Node::~Node() {
@@ -63,45 +122,61 @@ std::vector<Node::RegisterDsc> Node::get_registers_list() noexcept {
     return ret;
 }
 
-std::uint16_t Node::device_type() const noexcept {
-    return _device_type;
+std::uint16_t Node::node_type() const noexcept {
+    return _node_type;
 }
 
-std::uint64_t Node::device_version() const noexcept {
-    return _device_version;
+std::uint64_t Node::node_version() const noexcept {
+    return _node_version;
 }
 
-std::uint16_t Node::device_version_major() const noexcept {
-    return static_cast<std::uint16_t>(_device_version >> 32);
+std::uint16_t Node::node_version_major() const noexcept {
+    return static_cast<std::uint16_t>(_node_version >> 16);
 }
 
-std::uint16_t Node::device_version_minor() const noexcept {
-    return static_cast<std::uint16_t>(_device_version >> 16);
+std::uint16_t Node::node_version_minor() const noexcept {
+    return static_cast<std::uint16_t>(_node_version);
 }
 
-std::uint16_t Node::device_version_patch() const noexcept {
-    return static_cast<std::uint16_t>(_device_version);
+char Node::node_hardware_revision() const noexcept {
+    return _hardware_revision;
 }
 
-std::string Node::device_name() const noexcept {
-    return _device_name;
+std::uint8_t Node::node_reset_reason() const noexcept {
+    return _reset_reason;
 }
 
-std::time_t Node::device_created_time() const noexcept {
+std::string Node::node_name() const noexcept {
+    return _node_name;
+}
+
+timestamp_t Node::node_created_time() const noexcept {
     return _created_time;
 }
 
-std::time_t Node::device_last_seen_time() const noexcept {
+timestamp_t Node::node_last_seen_time() const noexcept {
     return _last_seen_time;
 }
 
-std::string Node::device_description() const noexcept {
-    return _device_description;
+std::string Node::node_description() const noexcept {
+    return _node_description;
 }
 
 void Node::node_reset() {
     ssize_t ret;
     if ((ret = reset("h9d")) < 0) {
+        if (ret == RawNode::TIMEOUT_ERROR)
+            throw TimeoutException();
+        else if (ret == RawNode::MALFORMED_FRAME_ERROR)
+            throw MalformedFrameException();
+        else
+            throw NodeException(-ret);
+    }
+}
+
+void Node::node_discovery(std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision) {
+    ssize_t ret;
+    if ((ret = discovery("h9d", type, version_major, version_minor, hardware_revision)) < 0) {
         if (ret == RawNode::TIMEOUT_ERROR)
             throw TimeoutException();
         else if (ret == RawNode::MALFORMED_FRAME_ERROR)
@@ -168,6 +243,23 @@ Node::regvalue_t Node::set_register(std::uint8_t reg, Node::regvalue_t value) {
                     return {val};
                 }
             }
+            else if (std::holds_alternative<float>(value) && register_map[reg].type == "float") {
+                auto v = std::get<float>(value);
+                float val;
+                ssize_t ret;
+                if ((ret = set_reg("h9d", reg, v, &val)) < 0) {
+                    if (ret == RawNode::TIMEOUT_ERROR)
+                        throw TimeoutException();
+                    else if (ret == RawNode::MALFORMED_FRAME_ERROR)
+                        throw MalformedFrameException();
+                    else
+                        throw NodeException(-ret);
+                }
+                else if (ret != sizeof(val)) {
+                    throw SizeMismatchException();
+                }
+                return {val};
+            }
             else if (std::holds_alternative<std::string>(value) && register_map[reg].type == "str") {
                 auto v = std::get<std::string>(value);
                 size_t len = register_map[reg].size / 8;
@@ -229,7 +321,23 @@ Node::regvalue_t Node::set_register(std::uint8_t reg, Node::regvalue_t value) {
 Node::regvalue_t Node::get_register(std::uint8_t reg) {
     if (register_map.count(reg)) {
         if (register_map[reg].readable) {
-            if (register_map[reg].type != "str") {
+            if (register_map[reg].type != "str" && register_map[reg].size == 32) {
+                std::float_t val;
+                ssize_t ret;
+                if ((ret = get_reg("h9d", reg, &val)) < 0) {
+                    if (ret == RawNode::TIMEOUT_ERROR)
+                        throw TimeoutException();
+                    else if (ret == RawNode::MALFORMED_FRAME_ERROR)
+                        throw MalformedFrameException();
+                    else
+                        throw NodeException(-ret);
+                }
+                else if (ret != sizeof(val)) {
+                    throw SizeMismatchException();
+                }
+                return {val};
+            }
+            else if (register_map[reg].type != "str") {
                 if (register_map[reg].size <= 8) {
                     std::uint8_t val;
                     ssize_t ret;

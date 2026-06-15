@@ -8,14 +8,15 @@
 #include <nlohmann/json.hpp>
 
 class TCPClientThread;
-class NodeDevMgr;
+class NodeMgr;
 
 class DevStatusObserver {
   private:
     TCPClientThread* client;
-    NodeDevMgr* mgr;
+    NodeMgr* mgr;
   public:
-    DevStatusObserver(TCPClientThread* tcp_client_thread, NodeDevMgr* mgr);
+    DevStatusObserver(TCPClientThread* tcp_client_thread, NodeMgr* mgr);
+    void detach();
     ~DevStatusObserver();
-    void on_dev_state_update(const nlohmann::json& dev_status);
+    void on_dev_state_update(const std::string &dev, const nlohmann::json& dev_status);
 };

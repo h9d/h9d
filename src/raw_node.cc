@@ -3,7 +3,7 @@
  *
  * Created by SQ8KFH on 2020-11-08.
  *
- * Copyright (C) 2020-2023 Kamil Palkowski. All rights reserved.
+ * Copyright (C) 2020-2024 Kamil Palkowski. All rights reserved.
  */
 
 #include "raw_node.h"
@@ -11,9 +11,10 @@
 #include <arpa/inet.h>
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
+#include <h9def.h>
 
 #include "bus.h"
-#include "node_dev_mgr.h"
+#include "node_mgr.h"
 
 void RawNode::on_frame_recv(const ExtH9Frame& frame) {
     frame_promise_set_mtx.lock();
@@ -26,9 +27,6 @@ void RawNode::on_frame_recv(const ExtH9Frame& frame) {
         }
     }
     frame_promise_set_mtx.unlock();
-}
-
-void RawNode::on_frame_send(const ExtH9Frame& frame) {
 }
 
 RawNode::FramePromise* RawNode::create_frame_promise(H9FrameComparator comparator) {
@@ -47,8 +45,7 @@ void RawNode::destroy_frame_promise(FramePromise* frame_promise) {
     frame_promise_set_mtx.unlock();
 }
 
-RawNode::RawNode(NodeDevMgr* node_mgr, Bus* bus, std::uint16_t node_id) noexcept:
-    FrameObserver(node_mgr, H9FrameComparator(node_id)),
+RawNode::RawNode(NodeMgr* node_mgr, Bus* bus, std::uint16_t node_id) noexcept:
     node_mgr(node_mgr),
     bus(bus),
     _node_id(node_id) {
@@ -94,9 +91,45 @@ ssize_t RawNode::reset(const std::string& origin) {
     return MALFORMED_FRAME_ERROR;
 }
 
+ssize_t RawNode::discovery(const std::string& origin, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision) {
+    H9FrameComparator comparator;
+    comparator.set_source_id(_node_id);
+    comparator.set_type(H9frame::Type::NODE_INFO);
+    comparator.set_type_in_alternate_set(H9frame::Type::ERROR);
+
+    FramePromise* frame_promise = create_frame_promise(comparator);
+
+    ExtH9Frame req(origin, H9frame::Type::DISCOVER, _node_id, 0, {});
+
+    int seqnum = bus->send_frame(req);
+    frame_promise->set_comparator_seqnum(seqnum);
+
+    auto future = frame_promise->get_future();
+
+    if (future.wait_for(std::chrono::seconds(node_mgr->response_timeout_duration())) != std::future_status::ready) {
+        destroy_frame_promise(frame_promise);
+        return TIMEOUT_ERROR; // timeout
+    }
+
+    ExtH9Frame res = future.get();
+
+    destroy_frame_promise(frame_promise);
+
+    if (res.type() == H9frame::Type::NODE_INFO && res.dlc() > 6) {
+        uint8_t rr;
+        parse_node_info_frame(res, type, version_major, version_minor, hardware_revision, rr);
+        return res.dlc();
+    }
+    else if (res.type() == H9frame::Type::ERROR && res.dlc() == 1) {
+        return -res.data()[0];
+    }
+
+    return MALFORMED_FRAME_ERROR;
+}
+
 int32_t RawNode::get_node_type(const std::string& origin) noexcept {
     std::uint16_t buf;
-    ssize_t ret = get_reg(origin, REG_NODE_TYPE, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
+    ssize_t ret = get_reg(origin, NODE_TYPE_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
     if (ret == 2) {
         return ntohs(buf);
     }
@@ -108,7 +141,7 @@ int32_t RawNode::get_node_type(const std::string& origin) noexcept {
 
 int64_t RawNode::get_node_version(const std::string& origin, std::uint16_t* major, std::uint16_t* minor, std::uint16_t* patch) noexcept {
     std::uint16_t buf[3];
-    ssize_t ret = get_reg(origin, REG_NODE_VERSION, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
+    ssize_t ret = get_reg(origin, NODE_VERSION_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
     if (ret == 6) {
         std::uint16_t tmp = ntohs(buf[0]);
         ret = tmp;
@@ -133,7 +166,7 @@ int64_t RawNode::get_node_version(const std::string& origin, std::uint16_t* majo
 
 int32_t RawNode::get_mcu_type(const std::string& origin) noexcept {
     std::uint16_t buf;
-    ssize_t ret = get_reg(origin, REG_NODE_MCU_TYPE, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
+    ssize_t ret = get_reg(origin, NODE_MCU_TYPE_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
     if (ret == 2) {
         return ntohs(buf);
     }
@@ -271,6 +304,18 @@ ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, std::uint3
     return ret;
 }
 
+ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, float reg_val, float* reg_after_set) {
+    uint32_t tmp_in, tmp_out;
+    memcpy(&tmp_in, &reg_val, 4);
+
+    ssize_t ret = set_reg(origin, reg, tmp_in, &tmp_out);
+
+    if (reg_after_set) {
+        memcpy(reg_after_set, &tmp_out, 4);
+    }
+    return ret;
+}
+
 ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, std::size_t length, std::uint8_t* reg_val) {
     H9FrameComparator comparator;
     comparator.set_source_id(_node_id);
@@ -328,4 +373,24 @@ ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, std::uint3
     ssize_t ret = get_reg(origin, reg, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
     *reg_val = ntohl(buf);
     return ret;
+}
+
+ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, float* reg_val) {
+    uint32_t tmp_out;
+    ssize_t ret = get_reg(origin, reg, &tmp_out);
+    memcpy(reg_val, &tmp_out, 4);
+    return ret;
+}
+
+int RawNode::parse_node_info_frame(const ExtH9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason) {
+//    if (frame.dlc() < 7)
+//        return MALFORMED_FRAME_ERROR;
+    node_type = frame.data()[0] << 8 | frame.data()[1];
+    version_major = frame.data()[2] << 8 | frame.data()[3];
+    version_minor = frame.data()[4] << 8 | frame.data()[5];
+
+    hardware_revision = frame.data()[6];
+    reset_reason = frame.data()[7];
+
+    return 0;
 }

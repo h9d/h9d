@@ -16,6 +16,13 @@ FrameObserver::FrameObserver(FrameSubject* subject, H9FrameComparator comparator
     subject->attach_frame_observer(this, comparator);
 }
 
-FrameObserver::~FrameObserver() {
+void FrameObserver::detach() {
     subject->detach_frame_observer(this);
+    SPDLOG_TRACE("FrameObserver::detach(this={}) [FrameSubject={}]", fmt::ptr(this), fmt::ptr(subject));
+    subject = nullptr;
+}
+
+FrameObserver::~FrameObserver() {
+    assert(subject == nullptr);
+    SPDLOG_TRACE("~FrameObserver(this={})", fmt::ptr(this));
 }

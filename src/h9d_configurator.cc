@@ -3,7 +3,7 @@
  *
  * Created by SQ8KFH on 2023-09-08.
  *
- * Copyright (C) 2023 Kamil Palkowski. All rights reserved.
+ * Copyright (C) 2023-2024 Kamil Palkowski. All rights reserved.
  */
 
 #include "h9d_configurator.h"
@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include "loop_driver.h"
+#include "udp_driver.h"
 #include "slcan_driver.h"
 #include "socketcan_driver.h"
 #include "git_version.h"
@@ -276,18 +277,26 @@ void H9dConfigurator::load_configuration() {
         CFG_BOOL("disable_recv_frames", cfg_false, CFGF_NONE),
         CFG_END()};
 
+    cfg_opt_t cfg_h9d_sec[] = {
+        CFG_INT("response_timeout", default_response_timeout, CFGF_NONE),
+        CFG_STR("nodes_description", nullptr, CFGF_NONE),
+        CFG_STR("devs_configuration", nullptr, CFGF_NONE),
+        CFG_INT("devs_workers", devs_workers, CFGF_NONE),
+        CFG_END()};
+
     cfg_opt_t cfg_endpoint_sec[] = {
         CFG_STR("driver", nullptr, CFGF_NONE),
         CFG_STR("tty", nullptr, CFGF_NONE),
+        CFG_STR("init_command", nullptr, CFGF_NONE),
         CFG_STR("interface", nullptr, CFGF_NONE),
+        CFG_STR("local_port", nullptr, CFGF_NONE),
+        CFG_STR("remote_port", nullptr, CFGF_NONE),
+        CFG_STR("remote_addr", nullptr, CFGF_NONE),
         CFG_END()};
 
     cfg_opt_t cfg_bus_opts[] = {
         CFG_INT("source_id", default_source_id, CFGF_NONE),
         CFG_BOOL("forwarding", cfg_true, CFGF_NONE),
-        CFG_INT("response_timeout_duration", default_response_timeout_duration, CFGF_NONE),
-        CFG_STR("nodes_description_filename", nullptr, CFGF_NONE),
-        CFG_STR("devs_configuration_filename", nullptr, CFGF_NONE),
         CFG_SEC("endpoint", cfg_endpoint_sec, CFGF_MULTI | CFGF_TITLE | CFGF_NO_TITLE_DUPES),
         CFG_END()};
 
@@ -301,6 +310,7 @@ void H9dConfigurator::load_configuration() {
     cfg_opt_t cfg_opts[] = {
         CFG_SEC("process", cfg_process_sec, CFGF_NONE),
         CFG_SEC("server", cfg_server_sec, CFGF_NONE),
+        CFG_SEC("h9d", cfg_h9d_sec, CFGF_NONE),
         CFG_SEC("bus", cfg_bus_opts, CFGF_NONE),
         CFG_SEC("virtual_endpoint", cfg_virtual_endpoint_sec, CFGF_NONE | CFGF_NODEFAULT),
         CFG_SEC("log", cfg_log_sec, CFGF_NONE),
@@ -427,6 +437,34 @@ void H9dConfigurator::configure_bus(Bus* bus, VirtualEndpoint* vendpoint) {
             if (driver == "loop") {
                 bus->add_driver(new LoopDriver(endpoint_name));
             }
+            else if (driver == "udp") {
+                std::string local_port;
+                std::string remote_port;
+                std::string remote_addr;
+
+                if (cfg_getstr(endpoint_section, "local_port")) {
+                    local_port = cfg_getstr(endpoint_section, "local_port");
+                }
+                else {
+                    SPDLOG_CRITICAL("Missing option 'local_port' for {}.", cfg_title(endpoint_section));
+                    exit(EXIT_FAILURE);
+                }
+                if (cfg_getstr(endpoint_section, "remote_port")) {
+                    remote_port = cfg_getstr(endpoint_section, "remote_port");
+                }
+                else {
+                    SPDLOG_CRITICAL("Missing option 'remote_port' for {}.", cfg_title(endpoint_section));
+                    exit(EXIT_FAILURE);
+                }
+                if (cfg_getstr(endpoint_section, "remote_addr")) {
+                    remote_addr = cfg_getstr(endpoint_section, "remote_addr");
+                }
+                else {
+                    SPDLOG_CRITICAL("Missing option 'remote_addr' for {}.", cfg_title(endpoint_section));
+                    exit(EXIT_FAILURE);
+                }
+                bus->add_driver(new UDPDriver(endpoint_name, local_port, remote_addr, remote_port));
+            }
             else if (driver == "virtual" && vendpoint) {
                 if (vendpoint->is_configured()) {
                     bus->add_driver(vendpoint->get_driver(endpoint_name));
@@ -438,10 +476,11 @@ void H9dConfigurator::configure_bus(Bus* bus, VirtualEndpoint* vendpoint) {
             else if (driver == "SLCAN") {
                 if (cfg_getstr(endpoint_section, "tty")) {
                     std::string tty = cfg_getstr(endpoint_section, "tty");
-                    bus->add_driver(new SlcanDriver(endpoint_name, tty));
+                    std::string init_string = cfg_getstr(endpoint_section, "init_command") ? cfg_getstr(endpoint_section, "init_command") : "";
+                    bus->add_driver(new SlcanDriver(endpoint_name, tty, init_string));
                 }
                 else {
-                    SPDLOG_CRITICAL("Missing option 'connection_string' for {}.", cfg_title(endpoint_section));
+                    SPDLOG_CRITICAL("Missing option 'tty' for {}.", cfg_title(endpoint_section));
                     exit(EXIT_FAILURE);
                 }
             }
@@ -515,14 +554,15 @@ void H9dConfigurator::configure_virtual_endpoint(VirtualEndpoint* vendpoint) {
     }
 }
 
-void H9dConfigurator::configure_devices_mgr(NodeDevMgr* devices_mgr) {
-    cfg_t* cfg_bus= cfg_getsec(cfg, "bus");
-    devices_mgr->response_timeout_duration(cfg_getint(cfg_bus, "response_timeout_duration"));
-    if (cfg_getstr(cfg_bus, "nodes_description_filename")) {
-        devices_mgr->load_nodes_description(cfg_getstr(cfg_bus, "nodes_description_filename"));
+void H9dConfigurator::configure_devices_mgr(NodeMgr* devices_mgr) {
+    cfg_t* cfg_bus= cfg_getsec(cfg, "h9d");
+    devices_mgr->response_timeout_duration(cfg_getint(cfg_bus, "response_timeout"));
+    devices_mgr->create_devs_workers(cfg_getint(cfg_bus, "devs_workers"));
+    if (cfg_getstr(cfg_bus, "nodes_description")) {
+        devices_mgr->load_nodes_description(cfg_getstr(cfg_bus, "nodes_description"));
     }
-    if (cfg_getstr(cfg_bus, "devs_configuration_filename")) {
-        devices_mgr->load_devs_configuration(cfg_getstr(cfg_bus, "devs_configuration_filename"));
+    if (cfg_getstr(cfg_bus, "devs_configuration")) {
+        devices_mgr->load_devs_configuration(cfg_getstr(cfg_bus, "devs_configuration"));
     }
 }
 

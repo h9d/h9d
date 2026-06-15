@@ -41,7 +41,9 @@ H9Socket::H9Socket(std::string hostname, std::string port) noexcept: H9Socket() 
 }
 
 H9Socket::~H9Socket() noexcept {
-    ::close(_socket);
+    close();
+    data_buf_len = 0;
+    free(data_buf);
 }
 
 int H9Socket::connect() noexcept {
