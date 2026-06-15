@@ -29,7 +29,7 @@ class ATU: public Dev {
     //    void update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame);
     void on_dev_info(std::uint16_t node_id, std::uint16_t type, std::uint16_t version_major, std::uint16_t version_minor, char hardware_revision) override;
     void on_dev_register_value(std::uint16_t node_id, uint8_t reg, Node::regvalue_t value) override;
-    void on_dev_bulk(std::uint16_t node_id, H9frame::Type msg_type, uint8_t dlc, const uint8_t* data) override;
+    void on_dev_bulk(std::uint16_t node_id, ExtH9Frame::Type msg_type, uint8_t dlc, const uint8_t* data) override;
 
     nlohmann::json get_dev_state(const std::map<std::string, nlohmann::json>& param_map) override;
 };

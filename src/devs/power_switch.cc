@@ -22,7 +22,7 @@ void PowerSwitch::periodic_task() {
 }
 
 bool PowerSwitch::is_init() {
-    return switch_id <= H9frame::H9FRAME_SOURCE_ID_MAX_VALUE;
+    return switch_id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE;
 }
 
 void PowerSwitch::init() {

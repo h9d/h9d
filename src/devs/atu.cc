@@ -22,7 +22,7 @@ void ATU::periodic_task() {
 }
 
 bool ATU::is_init() {
-    return atu_id <= H9frame::H9FRAME_SOURCE_ID_MAX_VALUE;
+    return atu_id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE;
 }
 
 void ATU::init() {
@@ -55,8 +55,8 @@ void ATU::on_dev_register_value(std::uint16_t node_id, uint8_t reg, Node::regval
     //                    {"antennas_name", std::vector<std::string>(antenna_name, &antenna_name[number_of_antenna])}});
 }
 
-void ATU::on_dev_bulk(std::uint16_t node_id, H9frame::Type msg_type, uint8_t dlc, const uint8_t* data) {
-    if (msg_type == H9frame::Type::NODE_SPECIFIC_BULK0) {
+void ATU::on_dev_bulk(std::uint16_t node_id, ExtH9Frame::Type msg_type, uint8_t dlc, const uint8_t* data) {
+    if (msg_type == ExtH9Frame::Type::NODE_SPECIFIC_BROADCAST0) {
         std::uint16_t swr = data[0] << 8 | data[1];
         std::uint16_t pwr = data[2] << 8 | data[3];
 

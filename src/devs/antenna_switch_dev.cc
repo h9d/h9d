@@ -33,7 +33,7 @@ void AntennaSwitchDev::periodic_task() {
 }
 
 bool AntennaSwitchDev::is_init() {
-    return switch_node_id <= H9frame::H9FRAME_SOURCE_ID_MAX_VALUE;
+    return switch_node_id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE;
 }
 
 //void AntennaSwitchDev::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {
