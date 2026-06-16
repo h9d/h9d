@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include <atomic>
+#include <thread>
+
 #include <spdlog/spdlog.h>
 
 #include "virtual_driver.h"
