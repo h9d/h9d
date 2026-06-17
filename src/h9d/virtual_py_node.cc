@@ -67,8 +67,8 @@ static struct PyModuleDef h9log_module = {
 VirtualEndpoint* VirtualPyNode::virtual_endpoint = nullptr;
 
 void VirtualPyNode::send_turned_on_broadcast() {
-    ExtH9Frame frame;
-    frame.type(ExtH9Frame::Type::NODE_TURNED_ON);
+    H9Frame frame;
+    frame.type(H9Frame::Type::NODE_TURNED_ON);
     frame.source_id(node_id);
     frame.broadcast_group(node_type);
 
@@ -76,7 +76,7 @@ void VirtualPyNode::send_turned_on_broadcast() {
     send_frame(frame);
 }
 
-void VirtualPyNode::call_py_on_frame(const ExtH9Frame& frame) {
+void VirtualPyNode::call_py_on_frame(const H9Frame& frame) {
     if (on_frame_func) {
         PyObject* f = PyH9Frame_New(frame);
 
@@ -102,7 +102,7 @@ void VirtualPyNode::reset() {
     virtual_endpoint->reload_node(new_node_id, py_module);
 }
 
-bool VirtualPyNode::send_frame(const ExtH9Frame& frame) {
+bool VirtualPyNode::send_frame(const H9Frame& frame) {
     if (VirtualPyNode::virtual_endpoint) {
         VirtualPyNode::virtual_endpoint->send_frame(frame);
     }
@@ -184,52 +184,52 @@ VirtualPyNode::~VirtualPyNode() {
     SPDLOG_LOGGER_INFO(logger, "Unload Python virtual node: '{}' with id: {}.", py_module, node_id);
 };
 
-void VirtualPyNode::on_frame(const ExtH9Frame& frame) {
+void VirtualPyNode::on_frame(const H9Frame& frame) {
     //TODO: poprawic obsluge standardowych rejestrow i operacji jak w bibliotece h9can
-    if (frame.type() == ExtH9Frame::Type::DISCOVER && (frame.broadcast_group() == node_type || frame.broadcast_group() == ExtH9Frame::BROADCAST_ID)) {
-        ExtH9Frame res;
-        res.type(ExtH9Frame::Type::NODE_INFO);
+    if (frame.type() == H9Frame::Type::DISCOVER && (frame.broadcast_group() == node_type || frame.broadcast_group() == H9Frame::BROADCAST_ID)) {
+        H9Frame res;
+        res.type(H9Frame::Type::NODE_INFO);
         res.source_id(node_id);
         res.broadcast_group(node_type);
 
         res.data({static_cast<uint8_t>((node_type >> 8) & 0xff), static_cast<uint8_t>((node_type)&0xff), (VERSION_MAJOR >> 8), VERSION_MAJOR & 0xff, (VERSION_MINOR >> 8) & 0xff, VERSION_MINOR & 0xff, 0, 0});
         send_frame(frame);
     }
-    else if (frame.type() == ExtH9Frame::Type::NODE_RESET && (frame.broadcast_group() == node_type || frame.broadcast_group() == ExtH9Frame::BROADCAST_ID)) {
+    else if (frame.type() == H9Frame::Type::NODE_RESET && (frame.broadcast_group() == node_type || frame.broadcast_group() == H9Frame::BROADCAST_ID)) {
         reset();
         return;
     }
-    else if (frame.type() == ExtH9Frame::Type::SET_REG && frame.destination_id() == node_id && frame.dlc() > 1) {
+    else if (frame.type() == H9Frame::Type::SET_REG && frame.destination_id() == node_id && frame.dlc() > 1) {
         if (frame.data()[0] >= 10) {
             call_py_on_frame(frame);
         }
         else {
-            ExtH9Frame res;
+            H9Frame res;
             res.seqnum(frame.seqnum());
             res.source_id(node_id);
             res.destination_id(frame.source_id());
 
             if (frame.data()[0] == 4 && frame.dlc() == 3) { // reg 4
-                res.type(ExtH9Frame::Type::REG_VALUE);
+                res.type(H9Frame::Type::REG_VALUE);
 
                 new_node_id = (frame.data()[1] & 0x01) << 8 | frame.data()[2];
 
                 res.data({frame.data()[0], frame.data()[1], frame.data()[2]});
             }
             else {
-                res.type(ExtH9Frame::Type::COMMAND_ERROR);
-                res.data({ExtH9Frame::to_underlying(ExtH9Frame::Error::INVALID_REGISTER)});
+                res.type(H9Frame::Type::COMMAND_ERROR);
+                res.data({H9Frame::to_underlying(H9Frame::Error::INVALID_REGISTER)});
             }
             send_frame(res);
         }
     }
-    else if (frame.type() == ExtH9Frame::Type::GET_REG && frame.destination_id() == node_id && frame.dlc() == 1) {
+    else if (frame.type() == H9Frame::Type::GET_REG && frame.destination_id() == node_id && frame.dlc() == 1) {
         if (frame.data()[0] >= 10) {
             call_py_on_frame(frame);
         }
         else {
-            ExtH9Frame res;
-            res.type(ExtH9Frame::Type::REG_VALUE);
+            H9Frame res;
+            res.type(H9Frame::Type::REG_VALUE);
             res.seqnum(frame.seqnum());
             res.source_id(node_id);
             res.destination_id(frame.source_id());
@@ -255,25 +255,25 @@ void VirtualPyNode::on_frame(const ExtH9Frame& frame) {
                 res.data({frame.data()[0], 0xff});
             }
             else {
-                res.type(ExtH9Frame::Type::COMMAND_ERROR);
-                res.data({ExtH9Frame::to_underlying(ExtH9Frame::Error::INVALID_REGISTER)});
+                res.type(H9Frame::Type::COMMAND_ERROR);
+                res.data({H9Frame::to_underlying(H9Frame::Error::INVALID_REGISTER)});
             }
             send_frame(res);
         }
     }
-    else if (frame.type() == ExtH9Frame::Type::SET_BIT && frame.destination_id() == node_id) {
+    else if (frame.type() == H9Frame::Type::SET_BIT && frame.destination_id() == node_id) {
         call_py_on_frame(frame);
     }
-    else if (frame.type() == ExtH9Frame::Type::CLEAR_BIT && frame.destination_id() == node_id) {
+    else if (frame.type() == H9Frame::Type::CLEAR_BIT && frame.destination_id() == node_id) {
         call_py_on_frame(frame);
     }
-    else if (frame.type() == ExtH9Frame::Type::NODE_UPGRADE && frame.destination_id() == node_id) {
-        ExtH9Frame res;
-        res.type(ExtH9Frame::Type::COMMAND_ERROR);
+    else if (frame.type() == H9Frame::Type::NODE_UPGRADE && frame.destination_id() == node_id) {
+        H9Frame res;
+        res.type(H9Frame::Type::COMMAND_ERROR);
         res.seqnum(frame.seqnum());
         res.source_id(node_id);
         res.destination_id(frame.source_id());
-        res.data({ExtH9Frame::to_underlying(ExtH9Frame::Error::BOOTLOADER_UNSUPPORTED)});
+        res.data({H9Frame::to_underlying(H9Frame::Error::BOOTLOADER_UNSUPPORTED)});
         send_frame(res);
     }
 }

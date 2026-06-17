@@ -37,11 +37,11 @@ class NodeMgr: public FrameObserver {
 
     int _response_timeout_duration;
 
-    virtual void on_frame_recv(const ExtH9Frame& frame) noexcept;
-    virtual void on_frame_send(const ExtH9Frame& frame) noexcept {};
+    virtual void on_frame_recv(const H9Frame& frame) noexcept;
+    virtual void on_frame_send(const H9Frame& frame) noexcept {};
 
     std::shared_mutex nodes_map_mtx;
-    Node* nodes[ExtH9Frame::ID_MAX_VALUE + 1];
+    Node* nodes[H9Frame::ID_MAX_VALUE + 1];
 
     std::shared_mutex devs_map_mtx;
     std::map<std::string, Dev*> devs_map;
@@ -51,7 +51,7 @@ class NodeMgr: public FrameObserver {
 
     std::mutex frame_queue_mtx;
     std::condition_variable frame_queue_cv; // TODO: counting_semaphore (C++20)?
-    std::queue<ExtH9Frame> frame_queue;
+    std::queue<H9Frame> frame_queue;
 
     DevLoader dev_desc_loader;
 
@@ -115,7 +115,7 @@ class NodeMgr: public FrameObserver {
     Node::regvalue_t clear_register_bit(std::uint16_t node_id, std::uint8_t reg, std::uint8_t bit_num);
     Node::regvalue_t toggle_register_bit(std::uint16_t node_id, std::uint8_t reg, std::uint8_t bit_num);
 
-    std::uint8_t get_reg_value_from_frame(std::uint16_t node_id, const ExtH9Frame& frame, Node::regvalue_t* value);
+    std::uint8_t get_reg_value_from_frame(std::uint16_t node_id, const H9Frame& frame, Node::regvalue_t* value);
 
     struct DevDsc {
         std::string name;

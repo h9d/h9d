@@ -22,7 +22,7 @@ void ATU::periodic_task() {
 }
 
 bool ATU::is_init() {
-    return atu_id <= ExtH9Frame::ID_MAX_VALUE;
+    return atu_id <= H9Frame::ID_MAX_VALUE;
 }
 
 void ATU::init() {
@@ -55,8 +55,8 @@ void ATU::on_dev_register_value(std::uint16_t node_id, uint8_t reg, Node::regval
     //                    {"antennas_name", std::vector<std::string>(antenna_name, &antenna_name[number_of_antenna])}});
 }
 
-void ATU::on_dev_bulk(std::uint16_t node_id, ExtH9Frame::Type msg_type, uint8_t dlc, const uint8_t* data) {
-    if (msg_type == ExtH9Frame::Type::NODE_SPECIFIC_BROADCAST0) {
+void ATU::on_dev_bulk(std::uint16_t node_id, H9Frame::Type msg_type, uint8_t dlc, const uint8_t* data) {
+    if (msg_type == H9Frame::Type::NODE_SPECIFIC_BROADCAST0) {
         std::uint16_t swr = data[0] << 8 | data[1];
         std::uint16_t pwr = data[2] << 8 | data[3];
 
@@ -64,7 +64,7 @@ void ATU::on_dev_bulk(std::uint16_t node_id, ExtH9Frame::Type msg_type, uint8_t 
     }
 }
 
-//void PowerSwitch::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {
+//void PowerSwitch::update_dev_state(std::uint16_t node_id, const H9Frame& frame) {
 //    SPDLOG_INFO("@{} update_dev_state", name);
 //
 //    emit_dev_state({{"selected_antenna", selected_antenna},

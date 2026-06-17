@@ -26,7 +26,7 @@ class PowerSwitch: public Dev {
     bool is_init() override;
     void init() override;
 
-//    void update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame);
+//    void update_dev_state(std::uint16_t node_id, const H9Frame& frame);
     void on_dev_info(std::uint16_t node_id, std::uint16_t type, std::uint16_t version_major, std::uint16_t version_minor, char hardware_revision) override;
     void on_dev_register_value(std::uint16_t node_id, uint8_t reg, Node::regvalue_t value) override;
 

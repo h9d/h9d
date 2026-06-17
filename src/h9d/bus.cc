@@ -33,13 +33,13 @@ bool Bus::recv_thread_send() {
         bus_frame->source_id(_bus_id);
         bus_frame->seqnum(next_seqnum);
         ++next_seqnum;
-        if (next_seqnum > ExtH9Frame::SEQNUM_MAX_VALUE) {
+        if (next_seqnum > H9Frame::SEQNUM_MAX_VALUE) {
             next_seqnum = 0;
         }
     }
 
     ++sent_frames_counter;
-    ++(*sent_frames_counter_by_type[ExtH9Frame::to_underlying(bus_frame->type())]);
+    ++(*sent_frames_counter_by_type[H9Frame::to_underlying(bus_frame->type())]);
 
     for (const auto& [socket, bus_driver] : bus) {
         bus_driver->send_frame(bus_frame);
@@ -123,7 +123,7 @@ void Bus::recv_thread() {
                             ret = bus_driver->recv_frame(&frame);
                             if (ret >= BusDriver::RECV_FRAME) {
                                 ++received_frames_counter;
-                                ++(*received_frames_counter_by_type[ExtH9Frame::to_underlying(frame->type())]);
+                                ++(*received_frames_counter_by_type[H9Frame::to_underlying(frame->type())]);
 
                                 SPDLOG_LOGGER_DEBUG(frames_logger, "Recv frame {}.", *frame);
                                 frames_recv_file_logger->info(SimpleJSONBusFrameWraper(frame));
@@ -169,8 +169,8 @@ Bus::Bus():
     next_seqnum = 0;
 
     for (int i = 0; i < number_of_frame_types; ++i) {
-        sent_frames_counter_by_type[i] = MetricsCollector::make_counter_ptr("bus.frames[type=" + std::string(ExtH9Frame::type_to_string(ExtH9Frame::from_underlying<ExtH9Frame::Type>(i))) + "].send");
-        received_frames_counter_by_type[i] = MetricsCollector::make_counter_ptr("bus.frames[type=" + std::string(ExtH9Frame::type_to_string(ExtH9Frame::from_underlying<ExtH9Frame::Type>(i))) + "].received");
+        sent_frames_counter_by_type[i] = MetricsCollector::make_counter_ptr("bus.frames[type=" + std::string(H9Frame::type_to_string(H9Frame::from_underlying<H9Frame::Type>(i))) + "].send");
+        received_frames_counter_by_type[i] = MetricsCollector::make_counter_ptr("bus.frames[type=" + std::string(H9Frame::type_to_string(H9Frame::from_underlying<H9Frame::Type>(i))) + "].received");
     }
 
     SPDLOG_LOGGER_INFO(logger, "Created buses manager with '{}' I/O event notification mechanism.", IOEventQueue::notification_mechanism_name);
@@ -211,13 +211,13 @@ void Bus::activate() {
     });
 }
 
-int Bus::send_frame(ExtH9Frame frame, bool raw) {
+int Bus::send_frame(H9Frame frame, bool raw) {
     std::future<SendFrameResult> send_future = send_frame_noblock(std::move(frame), raw);
 
     return send_future.get().seqnum;
 }
 
-std::future<SendFrameResult> Bus::send_frame_noblock(ExtH9Frame frame, bool raw) {
+std::future<SendFrameResult> Bus::send_frame_noblock(H9Frame frame, bool raw) {
     std::shared_ptr<BusFrame> busframe(new BusFrame(std::move(frame), raw));
 
     busframe->mark_as_local_origin();

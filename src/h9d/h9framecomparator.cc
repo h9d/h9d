@@ -13,8 +13,8 @@ H9FrameComparator::H9FrameComparator():
     source_id(0),
     seqnum(0),
     seqnum_override(0),
-    type_set1(ExtH9Frame::Type::RES1),
-    type_set2(ExtH9Frame::Type::RES1),
+    type_set1(H9Frame::Type::RES1),
+    type_set2(H9Frame::Type::RES1),
     destination_id_set1(0),
     destination_id_set2(0),
     dlc_set1(0),
@@ -30,7 +30,7 @@ H9FrameComparator::H9FrameComparator(std::uint16_t source_id_v):
     set_source_id(source_id_v);
 }
 
-bool H9FrameComparator::eq(const ExtH9Frame& b) const {
+bool H9FrameComparator::eq(const H9Frame& b) const {
     if (fields_to_compare & H9FrameComparator::BROADCAST_GROUP && broadcast_group != b.broadcast_group())
         return false;
 
@@ -60,7 +60,7 @@ bool H9FrameComparator::eq(const ExtH9Frame& b) const {
     return true;
 }
 
-bool H9FrameComparator::eq_alternate_set(const ExtH9Frame& b) const {
+bool H9FrameComparator::eq_alternate_set(const H9Frame& b) const {
     if (fields_to_compare & H9FrameComparator::SEQNUM_OVERRIDE) {
         if (seqnum_override != b.seqnum())
             return false;
@@ -91,7 +91,7 @@ bool H9FrameComparator::eq_alternate_set(const ExtH9Frame& b) const {
     return fields_to_compare & (H9FrameComparator::TYPE_SET2 | H9FrameComparator::DESTINATION_ID_SET2 | H9FrameComparator::DATA_SET2 | H9FrameComparator::FIRST_DATA_BYTE_SET2);
 }
 
-bool H9FrameComparator::operator==(const ExtH9Frame& b) const {
+bool H9FrameComparator::operator==(const H9Frame& b) const {
     if (fields_to_compare & H9FrameComparator::SOURCE_ID && source_id != b.source_id())
         return false;
 
@@ -163,12 +163,12 @@ void H9FrameComparator::set_broadcast_group(std::uint16_t broadcast_group_v) {
     fields_to_compare |= H9FrameComparator::BROADCAST_GROUP;
 }
 
-void H9FrameComparator::set_type(ExtH9Frame::Type type_v) {
+void H9FrameComparator::set_type(H9Frame::Type type_v) {
     type_set1 = type_v;
     fields_to_compare |= H9FrameComparator::TYPE_SET1;
 }
 
-void H9FrameComparator::set_type_in_alternate_set(ExtH9Frame::Type type_v) {
+void H9FrameComparator::set_type_in_alternate_set(H9Frame::Type type_v) {
     type_set2 = type_v;
     fields_to_compare |= H9FrameComparator::TYPE_SET2;
 }

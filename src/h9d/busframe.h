@@ -14,10 +14,10 @@
 #include <spdlog/spdlog.h>
 #include <sstream>
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include "send_frame_result.h"
 
-class BusFrame: public ExtH9Frame {
+class BusFrame: public H9Frame {
   private:
     std::uint64_t orgin_client_id;
     std::uint64_t orgin_msg_id;
@@ -36,7 +36,7 @@ class BusFrame: public ExtH9Frame {
     // BusFrame(const BusFrame&) = delete;
     // BusFrame& operator=(const BusFrame&) = delete;
     //BusFrame(const h9frame_t& frame, const std::string& origin, std::uint64_t orgin_client_id, std::uint64_t orgin_msg_id);
-    BusFrame(ExtH9Frame&& a, bool raw) noexcept;
+    BusFrame(H9Frame&& a, bool raw) noexcept;
     BusFrame& operator=(BusFrame&& a) = default;
 
     ~BusFrame();
@@ -79,10 +79,10 @@ struct spdlog::fmt_lib::formatter<SimpleJSONBusFrameWraper>: spdlog::fmt_lib::fo
             return spdlog::fmt_lib::format_to(ctx.out(),
                                               R"("origin": "{}", "frame": {{"type": {}, "type_name": "{}", "source_id": {}, "flags": {}, "destination_id": {}, "seqnum": {}, "dlc": {}, "data": [{}]}})",
                                               frame.busframe->origin(),
-                                              ExtH9Frame::to_underlying(frame.busframe->type()),
-                                              ExtH9Frame::type_to_string(frame.busframe->type()),
+                                              H9Frame::to_underlying(frame.busframe->type()),
+                                              H9Frame::type_to_string(frame.busframe->type()),
                                               frame.busframe->source_id(),
-                                              ExtH9Frame::to_underlying(frame.busframe->flags()),
+                                              H9Frame::to_underlying(frame.busframe->flags()),
                                               frame.busframe->destination_id(),
                                               frame.busframe->seqnum(),
                                               frame.busframe->dlc(),
@@ -92,8 +92,8 @@ struct spdlog::fmt_lib::formatter<SimpleJSONBusFrameWraper>: spdlog::fmt_lib::fo
             return spdlog::fmt_lib::format_to(ctx.out(),
                                               R"("origin": "{}", "frame": {{"type": {}, "type_name": "{}", "source_id": {}, "broadcast_group": {}, "dlc": {}, "data": [{}]}})",
                                               frame.busframe->origin(),
-                                              ExtH9Frame::to_underlying(frame.busframe->type()),
-                                              ExtH9Frame::type_to_string(frame.busframe->type()),
+                                              H9Frame::to_underlying(frame.busframe->type()),
+                                              H9Frame::type_to_string(frame.busframe->type()),
                                               frame.busframe->source_id(),
                                               frame.busframe->broadcast_group(),
                                               frame.busframe->dlc(),
@@ -118,7 +118,7 @@ struct spdlog::fmt_lib::formatter<BusFrame>: spdlog::fmt_lib::formatter<std::str
                                               frame.source_id(),
                                               frame.destination_id(),
                                               frame.seqnum(),
-                                              ExtH9Frame::type_to_string(frame.type()),
+                                              H9Frame::type_to_string(frame.type()),
                                               frame.dlc(),
                                               data_table.str());
         }
@@ -128,7 +128,7 @@ struct spdlog::fmt_lib::formatter<BusFrame>: spdlog::fmt_lib::formatter<std::str
                                               frame.origin(),
                                               frame.source_id(),
                                               frame.broadcast_group(),
-                                              ExtH9Frame::type_to_string(frame.type()),
+                                              H9Frame::type_to_string(frame.type()),
                                               frame.dlc(),
                                               data_table.str());
         }

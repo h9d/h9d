@@ -10,7 +10,7 @@
 
 #include "config.h"
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include "h9framecomparator.h"
 
 class FrameSubject;
@@ -25,8 +25,8 @@ class FrameObserver {
     FrameObserver(const FrameObserver&) = delete;
     ~FrameObserver();
 
-    virtual void on_frame_recv(const ExtH9Frame& frame) = 0;
-    virtual void on_frame_send(const ExtH9Frame& frame) = 0;
+    virtual void on_frame_recv(const H9Frame& frame) = 0;
+    virtual void on_frame_send(const H9Frame& frame) = 0;
 
   public:
     void detach();

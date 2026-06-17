@@ -27,6 +27,6 @@ class H9DDriver: public BusDriver {
     void close() override;
 
   private:
-    int recv_data(ExtH9Frame& frame) override;
-    int send_data(ExtH9Frame& frame) override;
+    int recv_data(H9Frame& frame) override;
+    int send_data(H9Frame& frame) override;
 };

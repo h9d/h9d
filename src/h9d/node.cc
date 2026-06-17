@@ -100,7 +100,7 @@ void Node::del_dependent_devices(Dev *dev) {
     dependent_devices_mtx.unlock();
 }
 
-void Node::on_frame_recv(const ExtH9Frame& frame) {
+void Node::on_frame_recv(const H9Frame& frame) {
     RawNode::on_frame_recv(frame);
 
     dependent_devices_mtx.lock();
@@ -528,9 +528,9 @@ Node::regvalue_t Node::toggle_register_bit(std::uint8_t reg, std::uint8_t bit_nu
     }
 }
 
-std::uint8_t Node::get_reg_value_from_frame(const ExtH9Frame& frame, regvalue_t* value) {
-    if (frame.type() == ExtH9Frame::Type::REG_VALUE ||
-         frame.type() == ExtH9Frame::Type::REG_VALUE_BROADCAST) {
+std::uint8_t Node::get_reg_value_from_frame(const H9Frame& frame, regvalue_t* value) {
+    if (frame.type() == H9Frame::Type::REG_VALUE ||
+         frame.type() == H9Frame::Type::REG_VALUE_BROADCAST) {
 
         if (frame.dlc() < 2)
             throw MalformedFrameException();

@@ -14,7 +14,7 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 
 /**
  * @brief Abstract base class representing an H9 CAN bus driver.
@@ -74,14 +74,14 @@ class BusDriver {
      * @param[out] frame  The received H9 frame.
      * @return RECV_FRAME, RECV_FRAME_DATA_IN_BUF, or SOCKET_CLOSE.
      */
-    virtual int recv_data(ExtH9Frame& frame) = 0;
+    virtual int recv_data(H9Frame& frame) = 0;
 
     /**
      * @brief Send a frame over the transport channel.
      * @param[in] frame  The frame to send.
      * @return Number of bytes sent, or a negative value on error.
      */
-    virtual int send_data(ExtH9Frame& frame) = 0;
+    virtual int send_data(H9Frame& frame) = 0;
 
     /** Invokes send_ack_callback(true) if the callback is set. */
     void frame_sent_correctly();
@@ -124,12 +124,12 @@ class BusDriver {
      * @param[in,out] frame  Frame to send; the seqnum field may be filled in.
      * @return Result of send_data().
      */
-    int send_frame(ExtH9Frame& frame);
+    int send_frame(H9Frame& frame);
 
     /**
      * @brief Receive one H9 frame.
      * @param[out] frame  The received frame.
      * @return RECV_FRAME, RECV_FRAME_DATA_IN_BUF, or SOCKET_CLOSE.
      */
-    int recv_frame(ExtH9Frame& frame);
+    int recv_frame(H9Frame& frame);
 };

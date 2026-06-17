@@ -11,7 +11,7 @@
 #include <exception>
 #include <string>
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include "api.h"
 
 class DevNodeException: public std::exception {
@@ -34,7 +34,7 @@ class DevNodeException: public std::exception {
 class NodeException: public DevNodeException {
   public:
     explicit NodeException(int code): DevNodeException(-1000 - code) {
-        msg = "Node exception: " + std::to_string(code) + " - " + ExtH9Frame::error_to_string(ExtH9Frame::from_underlying<ExtH9Frame::Error>(code)) + ".";
+        msg = "Node exception: " + std::to_string(code) + " - " + H9Frame::error_to_string(H9Frame::from_underlying<H9Frame::Error>(code)) + ".";
     }
 };
 

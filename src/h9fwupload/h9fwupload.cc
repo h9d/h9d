@@ -97,8 +97,8 @@ int main(int argc, char** argv) {
     auto start_time = std::chrono::steady_clock::now();
 
     if (h9.noupgrademsg) { //skip NODE_UPGRADE frame
-        ExtH9Frame frame;
-        frame.type(ExtH9Frame::Type::PAGE_START);
+        H9Frame frame;
+        frame.type(H9Frame::Type::PAGE_START);
         frame.destination_id(h9.dst_id);
         frame.dlc(2);
         std::uint16_t page = 0;
@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
         bus->send_frame(frame);
     }
     else {
-        ExtH9Frame frame;
-        frame.type(ExtH9Frame::Type::NODE_UPGRADE);
+        H9Frame frame;
+        frame.type(H9Frame::Type::NODE_UPGRADE);
         frame.destination_id(h9.dst_id);
         frame.dlc(0);
         bus->send_frame(frame);

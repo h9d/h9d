@@ -18,7 +18,7 @@ namespace {
 
 #include "types.h"
 
-class ExtH9Frame {
+class H9Frame {
   public:
     enum class Type : std::uint8_t {
         RES1 = H9FRAME_TYPE_RES1,
@@ -119,13 +119,13 @@ class ExtH9Frame {
     static const char* mcu_f_type_to_string(std::uint8_t mcu_f);
     static const char* reset_reason_to_string(std::uint8_t reset_reason);
 
-    ExtH9Frame();
-    //ExtH9Frame(const std::string& origin, uint32_t can_id, std::uint8_t dlc = 0, const std::array<std::uint8_t, MAX_DATA_LENGTH>& data = {});
-    //ExtH9Frame(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]);
+    H9Frame();
+    //H9Frame(const std::string& origin, uint32_t can_id, std::uint8_t dlc = 0, const std::array<std::uint8_t, MAX_DATA_LENGTH>& data = {});
+    //H9Frame(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]);
 
-    ExtH9Frame(const std::string& origin, Type type, Flags flags, std::uint8_t dst, const std::vector<std::uint8_t>& data = {});
-    ExtH9Frame(const std::string& origin, Type type, std::uint16_t broadcast_group, const std::vector<std::uint8_t>& data = {});
-    // ExtH9Frame(const std::string& origin, ExtH9Frame::Type type, std::uint16_t dst, const std::vector<std::uint8_t>& data = {});
+    H9Frame(const std::string& origin, Type type, Flags flags, std::uint8_t dst, const std::vector<std::uint8_t>& data = {});
+    H9Frame(const std::string& origin, Type type, std::uint16_t broadcast_group, const std::vector<std::uint8_t>& data = {});
+    // H9Frame(const std::string& origin, H9Frame::Type type, std::uint16_t dst, const std::vector<std::uint8_t>& data = {});
 
     [[nodiscard]] std::uint32_t can_id() const;
     void can_id(std::uint32_t can_id);
@@ -137,7 +137,7 @@ class ExtH9Frame {
     [[nodiscard]] timestamp_t creation_timestamp() const { return _creation_timestamp; }
 
     [[nodiscard]] const std::string& origin() const { return _origin; }
-    [[nodiscard]] ExtH9Frame::Type type() const { return _type; }
+    [[nodiscard]] H9Frame::Type type() const { return _type; }
     [[nodiscard]] std::uint8_t raw_type() const { return to_underlying(_type); }
     [[nodiscard]] std::uint8_t source_id() const { return _source_id; }
     [[nodiscard]] std::uint8_t seqnum() const { return _seqnum; }
@@ -149,7 +149,7 @@ class ExtH9Frame {
     [[nodiscard]] const std::uint8_t* data() const { return _data; }
 
     void origin(const std::string& origin);
-    void type(ExtH9Frame::Type type);
+    void type(H9Frame::Type type);
     void type(std::uint8_t type);
     void source_id(std::uint8_t source_id);
     void seqnum(std::uint8_t seqnum);
@@ -170,5 +170,5 @@ class ExtH9Frame {
     bool is_valid() const;
 };
 
-void to_json(nlohmann::json& j, const ExtH9Frame& f);
-void from_json(const nlohmann::json& j, ExtH9Frame& f);
+void to_json(nlohmann::json& j, const H9Frame& f);
+void from_json(const nlohmann::json& j, H9Frame& f);

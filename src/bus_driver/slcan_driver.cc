@@ -84,7 +84,7 @@ int SlcanDriver::open() {
     return socket_fd;
 }
 
-std::string SlcanDriver::build_slcan_msg(const ExtH9Frame& frame) {
+std::string SlcanDriver::build_slcan_msg(const H9Frame& frame) {
     uint32_t id = frame.can_id();
 
     std::ostringstream buf;
@@ -99,7 +99,7 @@ std::string SlcanDriver::build_slcan_msg(const ExtH9Frame& frame) {
     return buf.str();
 }
 
-bool SlcanDriver::parse_slcan_msg(const std::string& slcan_data, ExtH9Frame* frame) {
+bool SlcanDriver::parse_slcan_msg(const std::string& slcan_data, H9Frame* frame) {
     if (slcan_data.size() < 10)
         return false;
 
@@ -109,7 +109,7 @@ bool SlcanDriver::parse_slcan_msg(const std::string& slcan_data, ExtH9Frame* fra
     if (slcan_data.size() < (10 + 2*dlc))
         return false;
 
-    uint8_t buf[ExtH9Frame::MAX_DATA_LENGTH];
+    uint8_t buf[H9Frame::MAX_DATA_LENGTH];
 
     for (int i = 0; i < dlc; ++i) {
         uint32_t tmp = std::stoi(slcan_data.substr(10 + i * 2, 2), nullptr, 16);
@@ -123,7 +123,7 @@ bool SlcanDriver::parse_slcan_msg(const std::string& slcan_data, ExtH9Frame* fra
     return true;
 }
 
-int SlcanDriver::recv_data(ExtH9Frame& frame) {
+int SlcanDriver::recv_data(H9Frame& frame) {
     if (recv_queue.empty()) {
         std::uint8_t buf[100];
         ssize_t nbyte = read(socket_fd, buf, sizeof(buf) - 1);
@@ -152,7 +152,7 @@ int SlcanDriver::recv_data(ExtH9Frame& frame) {
     return EMPTY_BUF;
 }
 
-int SlcanDriver::send_data(ExtH9Frame& frame) {
+int SlcanDriver::send_data(H9Frame& frame) {
     std::string buf = build_slcan_msg(frame);
     ssize_t nbyte = write(socket_fd, buf.c_str(), buf.size());
     // std::cout << "send raw: " << buf.c_str() << std::endl;
@@ -184,7 +184,7 @@ void SlcanDriver::parse_buf() {
         //SPDLOG_LOGGER_ERROR(logger, "[BELL]");
     }
     else if (recv_buf[0] == 'T') {
-        ExtH9Frame frame;
+        H9Frame frame;
         if (parse_slcan_msg(recv_buf, &frame)) {
             frame.origin(name);
             recv_queue.push(frame);

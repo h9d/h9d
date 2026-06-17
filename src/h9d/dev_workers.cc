@@ -44,7 +44,7 @@ void DevWorkers::dev_periodic_task(Dev* dev) {
     sema.release();
 }
 
-void DevWorkers::update_dev_state(Dev* dev, std::uint16_t node_id, const ExtH9Frame& frame) {
+void DevWorkers::update_dev_state(Dev* dev, std::uint16_t node_id, const H9Frame& frame) {
     task_queue_mtx.lock();
     task_queue.push({.task_type = Task::UPDATE_TASK, .dev = dev, .node_id = node_id, .frame = frame});
     task_queue_mtx.unlock();

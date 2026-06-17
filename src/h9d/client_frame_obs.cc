@@ -12,12 +12,12 @@
 
 #include "tcpclientthread.h"
 
-void ClientFrameObs::on_frame_recv(const ExtH9Frame& frame) {
+void ClientFrameObs::on_frame_recv(const H9Frame& frame) {
     jsonrpcpp::Notification n("on_frame", nlohmann::json({{"frame", frame}}));
     client->send_msg(std::make_shared<jsonrpcpp::Notification>(std::move(n)));
 }
 
-void ClientFrameObs::on_frame_send(const ExtH9Frame& frame) {
+void ClientFrameObs::on_frame_send(const H9Frame& frame) {
     jsonrpcpp::Notification n("on_frame", nlohmann::json({{"frame", frame}}));
     client->send_msg(std::make_shared<jsonrpcpp::Notification>(std::move(n)));
 }

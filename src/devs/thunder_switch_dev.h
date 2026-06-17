@@ -25,7 +25,7 @@ class ThunderSwitchDev: public Dev {
 
     bool is_init() override;
 
-//    void update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) override;
+//    void update_dev_state(std::uint16_t node_id, const H9Frame& frame) override;
 
     nlohmann::json get_dev_state(const std::map<std::string, nlohmann::json>& param_map) override;
 

@@ -10,7 +10,7 @@
 
 #include "config.h"
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 
 class H9FrameComparator {
   private:
@@ -33,23 +33,23 @@ class H9FrameComparator {
     std::uint16_t broadcast_group;
     std::uint8_t seqnum;
     std::uint8_t seqnum_override;
-    ExtH9Frame::Type type_set1;
+    H9Frame::Type type_set1;
     std::uint8_t destination_id_set1;
     std::uint8_t dlc_set1;
     std::uint8_t data_set1[8];
     std::uint8_t first_data_byte_set1;
-    ExtH9Frame::Type type_set2;
+    H9Frame::Type type_set2;
     std::uint8_t destination_id_set2;
     std::uint8_t dlc_set2;
     std::uint8_t data_set2[8];
     std::uint8_t first_data_byte_set2;
 
-    bool eq(const ExtH9Frame& b) const;
-    bool eq_alternate_set(const ExtH9Frame& b) const;
+    bool eq(const H9Frame& b) const;
+    bool eq_alternate_set(const H9Frame& b) const;
   public:
     H9FrameComparator();
     explicit H9FrameComparator(std::uint16_t source_id_v);
-    bool operator==(const ExtH9Frame& b) const;
+    bool operator==(const H9Frame& b) const;
     bool operator<(const H9FrameComparator& b) const;
 
     void set_seqnum(std::uint8_t seqnum_v);
@@ -58,8 +58,8 @@ class H9FrameComparator {
 
     void seqnum_override_for_alternate_set(std::uint8_t seqnum_v);
 
-    void set_type(ExtH9Frame::Type type_v);
-    void set_type_in_alternate_set(ExtH9Frame::Type type_v);
+    void set_type(H9Frame::Type type_v);
+    void set_type_in_alternate_set(H9Frame::Type type_v);
 
     void set_destination_id(std::uint8_t destination_id_v);
     void set_destination_id_in_alternate_set(std::uint8_t destination_id_v);

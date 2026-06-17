@@ -5,7 +5,7 @@
 
 #include "libconfuse_helper.h"
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include <spdlog/spdlog.h>
 
 namespace confuse_helpers {
@@ -24,8 +24,8 @@ int validate_node_id(cfg_t* cfg, cfg_opt_t* opt) {
 
     for (auto idx = 0; idx < ids; ++idx) {
         auto id = cfg_opt_getnint(opt, idx);
-        if (id < 0 || id > ExtH9Frame::ID_MAX_VALUE) {
-            cfg_error(cfg, "option '%s' in section '%s' must have a value between 0-%d", opt->name, cfg->name, ExtH9Frame::ID_MAX_VALUE);
+        if (id < 0 || id > H9Frame::ID_MAX_VALUE) {
+            cfg_error(cfg, "option '%s' in section '%s' must have a value between 0-%d", opt->name, cfg->name, H9Frame::ID_MAX_VALUE);
             return -1;
         }
     }
@@ -36,7 +36,7 @@ int validate_node_id(cfg_t* cfg, cfg_opt_t* opt) {
 int validate_node_type(cfg_t* cfg, cfg_opt_t* opt) {
     auto type = cfg_opt_getnint(opt, cfg_opt_size(opt) - 1);
     if (type < 1 || type > 0xffff) {
-        cfg_error(cfg, "option '%s' in section '%s' must have a value between 1-%d", opt->name, cfg->name, ExtH9Frame::ID_MAX_VALUE);
+        cfg_error(cfg, "option '%s' in section '%s' must have a value between 1-%d", opt->name, cfg->name, H9Frame::ID_MAX_VALUE);
         return -1;
     }
 

@@ -22,7 +22,7 @@ void FirmwareUploader::upload(BusDriver* bus) {
     // std::cout << "Waiting for node...\n";
 
     while (true) {
-        ExtH9Frame recv_frame;
+        H9Frame recv_frame;
         try {
             if (bus->recv_frame(recv_frame) <= BusDriver::SOCKET_CLOSE)
                 continue;
@@ -40,8 +40,8 @@ void FirmwareUploader::upload(BusDriver* bus) {
 
         ++recv_frame_count;
 
-        if (recv_frame.type() == ExtH9Frame::Type::BOOTLOADER_TURNED_ON || recv_frame.type() == ExtH9Frame::Type::PAGE_WRITED) {
-            if (recv_frame.type() == ExtH9Frame::Type::PAGE_WRITED) {
+        if (recv_frame.type() == H9Frame::Type::BOOTLOADER_TURNED_ON || recv_frame.type() == H9Frame::Type::PAGE_WRITED) {
+            if (recv_frame.type() == H9Frame::Type::PAGE_WRITED) {
                 constexpr int PBWIDTH = 60;
                 constexpr char* PBSTR = (char*)"============================================================";
 
@@ -52,8 +52,8 @@ void FirmwareUploader::upload(BusDriver* bus) {
                 fflush(stdout);
 
                 if (fw_idx >= fw_size) {
-                    ExtH9Frame frame;
-                    frame.type(ExtH9Frame::Type::QUIT_BOOTLOADER);
+                    H9Frame frame;
+                    frame.type(H9Frame::Type::QUIT_BOOTLOADER);
                     frame.destination_id(node_id);
                     frame.dlc(0);
 
@@ -64,7 +64,7 @@ void FirmwareUploader::upload(BusDriver* bus) {
                     return;
                 }
                 page++;
-            } else if (recv_frame.type() == ExtH9Frame::Type::BOOTLOADER_TURNED_ON && recv_frame.dlc() == 5) {
+            } else if (recv_frame.type() == H9Frame::Type::BOOTLOADER_TURNED_ON && recv_frame.dlc() == 5) {
                 std::uint8_t bootloader_version_major = recv_frame.data()[0];
                 std::uint8_t bootloader_version_minor = recv_frame.data()[1];
                 std::uint8_t node_cpu = recv_frame.data()[2];
@@ -80,8 +80,8 @@ void FirmwareUploader::upload(BusDriver* bus) {
                 printf("Firmware size: %luB\n", fw_size);
             }
 
-            ExtH9Frame frame;
-            frame.type(ExtH9Frame::Type::PAGE_START);
+            H9Frame frame;
+            frame.type(H9Frame::Type::PAGE_START);
             frame.destination_id(node_id);
             frame.dlc(2);
 
@@ -89,9 +89,9 @@ void FirmwareUploader::upload(BusDriver* bus) {
 
             bus->send_frame(frame);
             ++sent_frame_count;
-        } else if (recv_frame.type() == ExtH9Frame::Type::PAGE_FILL_NEXT) {
-            ExtH9Frame frame;
-            frame.type(ExtH9Frame::Type::PAGE_FILL);
+        } else if (recv_frame.type() == H9Frame::Type::PAGE_FILL_NEXT) {
+            H9Frame frame;
+            frame.type(H9Frame::Type::PAGE_FILL);
             frame.destination_id(node_id);
             frame.dlc(8);
 

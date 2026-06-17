@@ -16,7 +16,7 @@
 #include "bus.h"
 #include "node_mgr.h"
 
-void RawNode::on_frame_recv(const ExtH9Frame& frame) {
+void RawNode::on_frame_recv(const H9Frame& frame) {
     frame_promise_set_mtx.lock();
     for (auto it = frame_promise_set.begin(); it != frame_promise_set.end();) {
         if ((*it)->on_frame(frame)) {
@@ -58,13 +58,13 @@ std::uint16_t RawNode::node_id() const noexcept {
 ssize_t RawNode::reset(const std::string& origin) {
     H9FrameComparator comparator;
     comparator.set_source_id(_node_id);
-    comparator.set_type(ExtH9Frame::Type::COMMAND_ERROR);
-    comparator.set_type_in_alternate_set(ExtH9Frame::Type::NODE_TURNED_ON);
+    comparator.set_type(H9Frame::Type::COMMAND_ERROR);
+    comparator.set_type_in_alternate_set(H9Frame::Type::NODE_TURNED_ON);
     comparator.seqnum_override_for_alternate_set(0);
 
     FramePromise* frame_promise = create_frame_promise(comparator);
 
-    ExtH9Frame req(origin, ExtH9Frame::Type::NODE_RESET, ExtH9Frame::Flags::SINGE_FRAME, _node_id);
+    H9Frame req(origin, H9Frame::Type::NODE_RESET, H9Frame::Flags::SINGE_FRAME, _node_id);
 
     int seqnum = bus->send_frame(req);
     frame_promise->set_comparator_seqnum(seqnum);
@@ -76,15 +76,15 @@ ssize_t RawNode::reset(const std::string& origin) {
         return TIMEOUT_ERROR; // timeout
     }
 
-    ExtH9Frame res = future.get();
+    H9Frame res = future.get();
 
     destroy_frame_promise(frame_promise);
 
-    if (res.type() == ExtH9Frame::Type::NODE_TURNED_ON) {
+    if (res.type() == H9Frame::Type::NODE_TURNED_ON) {
         // TODO: zrobic cos z data?
         return res.dlc();
     }
-    else if (res.type() == ExtH9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
+    else if (res.type() == H9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
         return -res.data()[0];
     }
 
@@ -94,12 +94,12 @@ ssize_t RawNode::reset(const std::string& origin) {
 // ssize_t RawNode::discovery(const std::string& origin, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision) {
 //     H9FrameComparator comparator;
 //     comparator.set_source_id(_node_id);
-//     comparator.set_type(ExtH9Frame::Type::NODE_INFO);
-//     comparator.set_type_in_alternate_set(ExtH9Frame::Type::COMMAND_ERROR);
+//     comparator.set_type(H9Frame::Type::NODE_INFO);
+//     comparator.set_type_in_alternate_set(H9Frame::Type::COMMAND_ERROR);
 //
 //     FramePromise* frame_promise = create_frame_promise(comparator);
 //
-//     ExtH9Frame req(origin, ExtH9Frame::Type::DISCOVER, _node_id, {});
+//     H9Frame req(origin, H9Frame::Type::DISCOVER, _node_id, {});
 //
 //     int seqnum = bus->send_frame(req);
 //     frame_promise->set_comparator_seqnum(seqnum);
@@ -111,16 +111,16 @@ ssize_t RawNode::reset(const std::string& origin) {
 //         return TIMEOUT_ERROR; // timeout
 //     }
 //
-//     ExtH9Frame res = future.get();
+//     H9Frame res = future.get();
 //
 //     destroy_frame_promise(frame_promise);
 //
-//     if (res.type() == ExtH9Frame::Type::NODE_INFO && res.dlc() > 6) {
+//     if (res.type() == H9Frame::Type::NODE_INFO && res.dlc() > 6) {
 //         uint8_t rr;
 //         parse_node_info_frame(res, type, version_major, version_minor, hardware_revision, rr);
 //         return res.dlc();
 //     }
-//     else if (res.type() == ExtH9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
+//     else if (res.type() == H9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
 //         return -res.data()[0];
 //     }
 //
@@ -180,16 +180,16 @@ void RawNode::firmware_update(const std::string& origin, void (*progress_callbac
     // TODO: implement frimware update
 }
 
-ssize_t RawNode::bit_operation(const std::string& origin, ExtH9Frame::Type type, std::uint8_t reg, std::uint8_t bit, std::size_t length, std::uint8_t* reg_after_set) {
+ssize_t RawNode::bit_operation(const std::string& origin, H9Frame::Type type, std::uint8_t reg, std::uint8_t bit, std::size_t length, std::uint8_t* reg_after_set) {
     H9FrameComparator comparator;
     comparator.set_source_id(_node_id);
-    comparator.set_type(ExtH9Frame::Type::REG_VALUE);
+    comparator.set_type(H9Frame::Type::REG_VALUE);
     comparator.set_first_data_byte(reg);
-    comparator.set_type_in_alternate_set(ExtH9Frame::Type::COMMAND_ERROR);
+    comparator.set_type_in_alternate_set(H9Frame::Type::COMMAND_ERROR);
 
     FramePromise* frame_promise = create_frame_promise(comparator);
 
-    ExtH9Frame req(origin, type, ExtH9Frame::Flags::SINGE_FRAME, _node_id, {reg, bit});
+    H9Frame req(origin, type, H9Frame::Flags::SINGE_FRAME, _node_id, {reg, bit});
 
     int seqnum = bus->send_frame(req);
     frame_promise->set_comparator_seqnum(seqnum);
@@ -201,11 +201,11 @@ ssize_t RawNode::bit_operation(const std::string& origin, ExtH9Frame::Type type,
         return TIMEOUT_ERROR; // timeout
     }
 
-    ExtH9Frame res = future.get();
+    H9Frame res = future.get();
 
     destroy_frame_promise(frame_promise);
 
-    if (res.type() == ExtH9Frame::Type::REG_VALUE && res.dlc() > 1) {
+    if (res.type() == H9Frame::Type::REG_VALUE && res.dlc() > 1) {
         if (reg_after_set) {
             size_t max = length < res.dlc() - 1 ? length : res.dlc() - 1;
 
@@ -216,7 +216,7 @@ ssize_t RawNode::bit_operation(const std::string& origin, ExtH9Frame::Type type,
 
         return res.dlc() - 1;
     }
-    else if (res.type() == ExtH9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
+    else if (res.type() == H9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
         return -res.data()[0];
     }
 
@@ -224,30 +224,30 @@ ssize_t RawNode::bit_operation(const std::string& origin, ExtH9Frame::Type type,
 }
 
 ssize_t RawNode::set_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length, std::uint8_t* reg_after_set) {
-    return bit_operation(origin, ExtH9Frame::Type::SET_BIT, reg, bit, length, reg_after_set);
+    return bit_operation(origin, H9Frame::Type::SET_BIT, reg, bit, length, reg_after_set);
 }
 
 ssize_t RawNode::clear_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length, std::uint8_t* reg_after_set) {
-    return bit_operation(origin, ExtH9Frame::Type::CLEAR_BIT, reg, bit, length, reg_after_set);
+    return bit_operation(origin, H9Frame::Type::CLEAR_BIT, reg, bit, length, reg_after_set);
 }
 
 ssize_t RawNode::toggle_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length, std::uint8_t* reg_after_set) {
-    return bit_operation(origin, ExtH9Frame::Type::SET_BIT, reg, bit, length, reg_after_set);
+    return bit_operation(origin, H9Frame::Type::SET_BIT, reg, bit, length, reg_after_set);
 }
 
 ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, std::size_t length, const std::uint8_t* reg_val, std::uint8_t* reg_after_set, ssize_t reg_after_set_length) {
     H9FrameComparator comparator;
     comparator.set_source_id(_node_id);
-    comparator.set_type(ExtH9Frame::Type::REG_VALUE);
+    comparator.set_type(H9Frame::Type::REG_VALUE);
     comparator.set_first_data_byte(reg);
-    comparator.set_type_in_alternate_set(ExtH9Frame::Type::COMMAND_ERROR);
+    comparator.set_type_in_alternate_set(H9Frame::Type::COMMAND_ERROR);
 
     FramePromise* frame_promise = create_frame_promise(comparator);
 
     std::vector<std::uint8_t> data = {reg};
     data.insert(data.end(), reg_val, &reg_val[length + 1]);
 
-    ExtH9Frame req(origin, ExtH9Frame::Type::SET_REG, ExtH9Frame::Flags::SINGE_FRAME, _node_id, data);
+    H9Frame req(origin, H9Frame::Type::SET_REG, H9Frame::Flags::SINGE_FRAME, _node_id, data);
 
     int seqnum = bus->send_frame(req);
     frame_promise->set_comparator_seqnum(seqnum);
@@ -259,11 +259,11 @@ ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, std::size_
         return TIMEOUT_ERROR; // timeout
     }
 
-    ExtH9Frame res = future.get();
+    H9Frame res = future.get();
 
     destroy_frame_promise(frame_promise);
 
-    if (res.type() == ExtH9Frame::Type::REG_VALUE && res.dlc() > 1) {
+    if (res.type() == H9Frame::Type::REG_VALUE && res.dlc() > 1) {
         if (reg_after_set) {
             reg_after_set_length = reg_after_set_length < 0 ? length : reg_after_set_length;
             size_t max = length < res.dlc() - 1 ? reg_after_set_length : res.dlc() - 1;
@@ -275,7 +275,7 @@ ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, std::size_
 
         return res.dlc() - 1;
     }
-    else if (res.type() == ExtH9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
+    else if (res.type() == H9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
         return -res.data()[0];
     }
 
@@ -319,13 +319,13 @@ ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, float reg_
 ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, std::size_t length, std::uint8_t* reg_val) {
     H9FrameComparator comparator;
     comparator.set_source_id(_node_id);
-    comparator.set_type(ExtH9Frame::Type::REG_VALUE);
+    comparator.set_type(H9Frame::Type::REG_VALUE);
     comparator.set_first_data_byte(reg);
-    comparator.set_type_in_alternate_set(ExtH9Frame::Type::COMMAND_ERROR);
+    comparator.set_type_in_alternate_set(H9Frame::Type::COMMAND_ERROR);
 
     FramePromise* frame_promise = create_frame_promise(comparator);
 
-    ExtH9Frame req(origin, ExtH9Frame::Type::GET_REG, ExtH9Frame::Flags::SINGE_FRAME, _node_id, {reg});
+    H9Frame req(origin, H9Frame::Type::GET_REG, H9Frame::Flags::SINGE_FRAME, _node_id, {reg});
 
     int seqnum = bus->send_frame(req);
     frame_promise->set_comparator_seqnum(seqnum);
@@ -337,11 +337,11 @@ ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, std::size_
         return TIMEOUT_ERROR; // timeout
     }
 
-    ExtH9Frame res = future.get();
+    H9Frame res = future.get();
 
     destroy_frame_promise(frame_promise);
 
-    if (res.type() == ExtH9Frame::Type::REG_VALUE && res.dlc() > 1) {
+    if (res.type() == H9Frame::Type::REG_VALUE && res.dlc() > 1) {
         size_t ret = length < res.dlc() - 1 ? length : res.dlc() - 1;
 
         for (int i = 0; i < ret; ++i) {
@@ -350,7 +350,7 @@ ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, std::size_
 
         return res.dlc() - 1;
     }
-    else if (res.type() == ExtH9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
+    else if (res.type() == H9Frame::Type::COMMAND_ERROR && res.dlc() == 1) {
         return -res.data()[0];
     }
 
@@ -382,7 +382,7 @@ ssize_t RawNode::get_reg(const std::string& origin, std::uint8_t reg, float* reg
     return ret;
 }
 
-int RawNode::parse_node_info_frame(const ExtH9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason) {
+int RawNode::parse_node_info_frame(const H9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason) {
 //    if (frame.dlc() < 7)
 //        return MALFORMED_FRAME_ERROR;
     node_type = frame.data()[0] << 8 | frame.data()[1];

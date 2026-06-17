@@ -45,7 +45,7 @@ void H9DDriver::close() {
     h9socket.close();
 }
 
-int H9DDriver::recv_data(ExtH9Frame& frame) {
+int H9DDriver::recv_data(H9Frame& frame) {
     nlohmann::json json;
     int res = h9socket.recv_complete_msg(json);
     if (res < 0) {
@@ -66,7 +66,7 @@ int H9DDriver::recv_data(ExtH9Frame& frame) {
     return EMPTY_BUF;
 }
 
-int H9DDriver::send_data(ExtH9Frame& frame) {
+int H9DDriver::send_data(H9Frame& frame) {
     nlohmann::json req = {
         {"jsonrpc", "2.0"},
         {"id", ++next_msg_id},

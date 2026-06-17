@@ -6,13 +6,13 @@
  * Copyright (C) 2023 Kamil Palkowski. All rights reserved.
  */
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 
-ExtH9Frame::ExtH9Frame():
+H9Frame::H9Frame():
     _creation_timestamp(timestamp_t::clock::now()) {
 }
 
-// ExtH9Frame::ExtH9Frame(const std::string& origin, uint32_t can_id, std::uint8_t dlc, const std::array<std::uint8_t, 8>& data):
+// H9Frame::H9Frame(const std::string& origin, uint32_t can_id, std::uint8_t dlc, const std::array<std::uint8_t, 8>& data):
 //     _origin(origin),
 //     _creation_timestamp(timestamp_t::clock::now()) {
 //
@@ -22,15 +22,15 @@ ExtH9Frame::ExtH9Frame():
 //     this->data(data);
 // }
 //
-// ExtH9Frame::ExtH9Frame(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]):
+// H9Frame::H9Frame(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]):
 //     _origin(origin),
 //     _creation_timestamp(timestamp_t::clock::now()) {
 //
-//     _type = from_underlying<ExtH9Frame::Type>(serialized_data[0] & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1));
+//     _type = from_underlying<H9Frame::Type>(serialized_data[0] & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1));
 //     _source_id = serialized_data[1] & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
 //
 //     if (is_unicast()) {
-//         _flags = from_underlying<ExtH9Frame::Flags>((serialized_data[2] >> (8 - H9FRAME_FLAGS_BITS_LENGTH)) & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1));
+//         _flags = from_underlying<H9Frame::Flags>((serialized_data[2] >> (8 - H9FRAME_FLAGS_BITS_LENGTH)) & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1));
 //         _destination_id = (serialized_data[2] << H9FRAME_FLAGS_BITS_LENGTH) | (serialized_data[3] >> H9FRAME_SEQNUM_BIT_LENGTH);
 //         _seqnum = serialized_data[3] & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
 //     }
@@ -45,7 +45,7 @@ ExtH9Frame::ExtH9Frame():
 //     }
 // }
 
-ExtH9Frame::ExtH9Frame(const std::string& origin, ExtH9Frame::Type type, ExtH9Frame::Flags flags, std::uint8_t dst, const std::vector<std::uint8_t>& data):
+H9Frame::H9Frame(const std::string& origin, H9Frame::Type type, H9Frame::Flags flags, std::uint8_t dst, const std::vector<std::uint8_t>& data):
     _creation_timestamp(timestamp_t::clock::now()) {
     this->origin(origin);
     this->type(type);
@@ -53,20 +53,20 @@ ExtH9Frame::ExtH9Frame(const std::string& origin, ExtH9Frame::Type type, ExtH9Fr
     this->destination_id(dst);
     this->data(data);
 
-    assert(type < ExtH9Frame::Type::DISCOVER);
+    assert(type < H9Frame::Type::DISCOVER);
 }
 
-ExtH9Frame::ExtH9Frame(const std::string& origin, Type type, std::uint16_t broadcast_group, const std::vector<std::uint8_t>& data):
+H9Frame::H9Frame(const std::string& origin, Type type, std::uint16_t broadcast_group, const std::vector<std::uint8_t>& data):
 _creation_timestamp(timestamp_t::clock::now()) {
     this->origin(origin);
     this->type(type);
     this->broadcast_group(broadcast_group);
     this->data(data);
 
-    assert(type >= ExtH9Frame::Type::DISCOVER);
+    assert(type >= H9Frame::Type::DISCOVER);
 }
 
- std::uint32_t ExtH9Frame::can_id() const {
+ std::uint32_t H9Frame::can_id() const {
     uint32_t id = 0;
     id |= to_underlying(_type)& ((1 << TYPE_BIT_LENGTH) - 1);
     id <<= ID_BIT_LENGTH;
@@ -86,12 +86,12 @@ _creation_timestamp(timestamp_t::clock::now()) {
     return id;
 }
 
-void ExtH9Frame::can_id(std::uint32_t can_id) {
-    _type = from_underlying<ExtH9Frame::Type>((uint8_t)((can_id >> (ID_BIT_LENGTH + FLAGS_BITS_LENGTH + ID_BIT_LENGTH + SEQNUM_BIT_LENGTH)) & ((1 << TYPE_BIT_LENGTH) - 1)));
+void H9Frame::can_id(std::uint32_t can_id) {
+    _type = from_underlying<H9Frame::Type>((uint8_t)((can_id >> (ID_BIT_LENGTH + FLAGS_BITS_LENGTH + ID_BIT_LENGTH + SEQNUM_BIT_LENGTH)) & ((1 << TYPE_BIT_LENGTH) - 1)));
     _source_id = static_cast<std::uint8_t>((can_id >> (FLAGS_BITS_LENGTH + ID_BIT_LENGTH + SEQNUM_BIT_LENGTH)) & ((1 << ID_BIT_LENGTH) - 1));
 
     if (is_unicast()) {
-        _flags = from_underlying<ExtH9Frame::Flags>((uint8_t)((can_id >> (ID_BIT_LENGTH + SEQNUM_BIT_LENGTH)) & ((1 << FLAGS_BITS_LENGTH) - 1)));
+        _flags = from_underlying<H9Frame::Flags>((uint8_t)((can_id >> (ID_BIT_LENGTH + SEQNUM_BIT_LENGTH)) & ((1 << FLAGS_BITS_LENGTH) - 1)));
         _destination_id = static_cast<std::uint8_t>((can_id >> SEQNUM_BIT_LENGTH) & ((1 << ID_BIT_LENGTH) - 1));
         _seqnum = static_cast<std::uint8_t>((can_id >> 0) & ((1 << SEQNUM_BIT_LENGTH) - 1));
     }
@@ -100,7 +100,7 @@ void ExtH9Frame::can_id(std::uint32_t can_id) {
     }
 }
 
-std::array<uint8_t, ExtH9Frame::SERIALIZATION_LENGTH> ExtH9Frame::serialize() const {
+std::array<uint8_t, H9Frame::SERIALIZATION_LENGTH> H9Frame::serialize() const {
     std::array<uint8_t, SERIALIZATION_LENGTH> ret;
 
     uint32_t id = can_id();
@@ -119,7 +119,7 @@ std::array<uint8_t, ExtH9Frame::SERIALIZATION_LENGTH> ExtH9Frame::serialize() co
     return std::move(ret);
 }
 
-void ExtH9Frame::deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc, const std::vector<std::uint8_t>& data) {
+void H9Frame::deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc, const std::vector<std::uint8_t>& data) {
     _origin = origin;
 
     this->can_id(can_id);
@@ -127,14 +127,14 @@ void ExtH9Frame::deserialize(const std::string& origin, uint32_t can_id, std::ui
     this->dlc(dlc);
 }
 
-void ExtH9Frame::deserialize(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]) {
+void H9Frame::deserialize(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]) {
     _origin = origin;
 
-    _type = from_underlying<ExtH9Frame::Type>(serialized_data[0] & ((1 << TYPE_BIT_LENGTH) - 1));
+    _type = from_underlying<H9Frame::Type>(serialized_data[0] & ((1 << TYPE_BIT_LENGTH) - 1));
     _source_id = serialized_data[1] & ((1 << ID_BIT_LENGTH) - 1);
 
     if (is_unicast()) {
-        _flags = from_underlying<ExtH9Frame::Flags>((serialized_data[2] >> (8 - FLAGS_BITS_LENGTH)) & ((1 << FLAGS_BITS_LENGTH) - 1));
+        _flags = from_underlying<H9Frame::Flags>((serialized_data[2] >> (8 - FLAGS_BITS_LENGTH)) & ((1 << FLAGS_BITS_LENGTH) - 1));
         _destination_id = (serialized_data[2] << FLAGS_BITS_LENGTH) | (serialized_data[3] >> SEQNUM_BIT_LENGTH);
         _seqnum = serialized_data[3] & ((1 << SEQNUM_BIT_LENGTH) - 1);
     }
@@ -149,47 +149,47 @@ void ExtH9Frame::deserialize(const std::string& origin, const std::uint8_t seria
     }
 }
 
-void ExtH9Frame::origin(const std::string& origin) {
+void H9Frame::origin(const std::string& origin) {
     _origin = origin;
 }
 
-void ExtH9Frame::type(ExtH9Frame::Type type) {
+void H9Frame::type(H9Frame::Type type) {
     _type = type;
 }
 
-void ExtH9Frame::type(std::uint8_t type) {
-    _type = ExtH9Frame::from_underlying<ExtH9Frame::Type>(type);
+void H9Frame::type(std::uint8_t type) {
+    _type = H9Frame::from_underlying<H9Frame::Type>(type);
 }
 
-void ExtH9Frame::seqnum(std::uint8_t seqnum) {
+void H9Frame::seqnum(std::uint8_t seqnum) {
     _seqnum = seqnum;
 }
 
-void ExtH9Frame::destination_id(std::uint8_t destination_id) {
+void H9Frame::destination_id(std::uint8_t destination_id) {
     _destination_id = destination_id;
 }
 
-void ExtH9Frame::flags(Flags flags) {
+void H9Frame::flags(Flags flags) {
     _flags = flags;
 }
 
-void ExtH9Frame::flags(std::uint8_t flags) {
-    _flags = from_underlying<ExtH9Frame::Flags>(flags);
+void H9Frame::flags(std::uint8_t flags) {
+    _flags = from_underlying<H9Frame::Flags>(flags);
 }
 
-void ExtH9Frame::broadcast_group(std::uint16_t broadcast_group) {
+void H9Frame::broadcast_group(std::uint16_t broadcast_group) {
     _group = broadcast_group;
 }
 
-void ExtH9Frame::source_id(std::uint8_t source_id) {
+void H9Frame::source_id(std::uint8_t source_id) {
     _source_id = source_id;
 }
 
-void ExtH9Frame::dlc(std::uint8_t dlc) {
+void H9Frame::dlc(std::uint8_t dlc) {
     _dlc = dlc;
 }
 
-void ExtH9Frame::data(const std::vector<std::uint8_t>& data) {
+void H9Frame::data(const std::vector<std::uint8_t>& data) {
     int i = 0;
     for (auto& d : data) {
         _data[i] = d;
@@ -199,17 +199,17 @@ void ExtH9Frame::data(const std::vector<std::uint8_t>& data) {
     _dlc = i;
 }
 
-void ExtH9Frame::data(const std::uint8_t data[MAX_DATA_LENGTH]) {
+void H9Frame::data(const std::uint8_t data[MAX_DATA_LENGTH]) {
     for (int i = 0; i < MAX_DATA_LENGTH; ++i) {
         _data[i] = data[i];
     }
 }
 
-uint8_t* ExtH9Frame::data_raw() {
+uint8_t* H9Frame::data_raw() {
     return _data;
 }
 
-// void ExtH9Frame::data(const std::array<std::uint8_t, MAX_DATA_LENGTH>& data) {
+// void H9Frame::data(const std::array<std::uint8_t, MAX_DATA_LENGTH>& data) {
 //     int i = 0;
 //     for (auto& d : data) {
 //         _data[i] = d;
@@ -217,24 +217,24 @@ uint8_t* ExtH9Frame::data_raw() {
 //     }
 // }
 
-bool ExtH9Frame::is_unicast() const {
+bool H9Frame::is_unicast() const {
     return _type < Type::DISCOVER;
 }
 
-bool ExtH9Frame::is_broadcast() const {
+bool H9Frame::is_broadcast() const {
     return _type >= Type::DISCOVER;
 }
 
-bool ExtH9Frame::is_valid() const {
+bool H9Frame::is_valid() const {
     //TODO: zrobic cos normalnego
     return true;
 }
 
-void to_json(nlohmann::json& j, const ExtH9Frame& f) {
+void to_json(nlohmann::json& j, const H9Frame& f) {
     std::vector<std::uint8_t> data(f.data(), f.data() + f.dlc());
     if (f.is_unicast()) {
         j = nlohmann::json{{"origin", f.origin()},
-                       {"type", ExtH9Frame::to_underlying(f.type())},
+                       {"type", H9Frame::to_underlying(f.type())},
                        {"source_id", f.source_id()},
                        {"seqnum", f.seqnum()},
                        {"destination_id", f.destination_id()},
@@ -244,7 +244,7 @@ void to_json(nlohmann::json& j, const ExtH9Frame& f) {
     }
     else {
         j = nlohmann::json{{"origin", f.origin()},
-                       {"type", ExtH9Frame::to_underlying(f.type())},
+                       {"type", H9Frame::to_underlying(f.type())},
                        {"source_id", f.source_id()},
                        {"broadcast_group", f.broadcast_group()},
                        {"dlc", f.dlc()},
@@ -252,7 +252,7 @@ void to_json(nlohmann::json& j, const ExtH9Frame& f) {
     }
 }
 
-void from_json(const nlohmann::json& j, ExtH9Frame& f) {
+void from_json(const nlohmann::json& j, H9Frame& f) {
     // if (j.count("origin"))
     //     f.origin(j.at("origin").get<std::string>());
     // else
@@ -279,7 +279,7 @@ void from_json(const nlohmann::json& j, ExtH9Frame& f) {
         f.data(j.at("data").get<std::vector<std::uint8_t>>());
 }
 
-const char* ExtH9Frame::type_to_string(ExtH9Frame::Type type) {
+const char* H9Frame::type_to_string(H9Frame::Type type) {
     switch (type) {
     case Type::RES1:
         return "RES1";
@@ -349,7 +349,7 @@ const char* ExtH9Frame::type_to_string(ExtH9Frame::Type type) {
     return nullptr;
 }
 
-const char* ExtH9Frame::error_to_string(ExtH9Frame::Error error) {
+const char* H9Frame::error_to_string(H9Frame::Error error) {
     switch (error) {
     case Error::INVALID_FRAME:
         return "INVALID FRAME";
@@ -371,7 +371,7 @@ const char* ExtH9Frame::error_to_string(ExtH9Frame::Error error) {
     return "UNKNOWN_ERROR";
 }
 
-const char* ExtH9Frame::mcu_type_to_string(std::uint8_t mcu) {
+const char* H9Frame::mcu_type_to_string(std::uint8_t mcu) {
     switch (mcu) {
         case NODE_MCU_ATMEGA16M1:
             return "ATmega16M1";
@@ -393,7 +393,7 @@ const char* ExtH9Frame::mcu_type_to_string(std::uint8_t mcu) {
     return "UNKNOWN";
 }
 
-const char* ExtH9Frame::mcu_f_type_to_string(std::uint8_t mcu_f) {
+const char* H9Frame::mcu_f_type_to_string(std::uint8_t mcu_f) {
     switch (mcu_f) {
         case NODE_MCU_F_2MHz:
             return "2 MHz";
@@ -411,7 +411,7 @@ const char* ExtH9Frame::mcu_f_type_to_string(std::uint8_t mcu_f) {
     return "UNKNOWN";
 }
 
-const char* ExtH9Frame::reset_reason_to_string(std::uint8_t reset_reason) {
+const char* H9Frame::reset_reason_to_string(std::uint8_t reset_reason) {
     switch (reset_reason) {
         case NODE_RESET_BY_UNKNOWN:
             return "UNKNOWN";

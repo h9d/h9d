@@ -33,10 +33,10 @@ void AntennaSwitchDev::periodic_task() {
 }
 
 bool AntennaSwitchDev::is_init() {
-    return switch_node_id <= ExtH9Frame::ID_MAX_VALUE;
+    return switch_node_id <= H9Frame::ID_MAX_VALUE;
 }
 
-//void AntennaSwitchDev::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {
+//void AntennaSwitchDev::update_dev_state(std::uint16_t node_id, const H9Frame& frame) {
 //    if (node_id != switch_node_id)
 //        return;
 //

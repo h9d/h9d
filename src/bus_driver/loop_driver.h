@@ -28,6 +28,6 @@ class LoopDriver: public BusDriver {
     int open();
 
   private:
-    int recv_data(ExtH9Frame& frame);
-    int send_data(ExtH9Frame& frame);
+    int recv_data(H9Frame& frame);
+    int send_data(H9Frame& frame);
 };

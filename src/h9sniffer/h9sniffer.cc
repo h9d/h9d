@@ -14,7 +14,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include "h9_configurator.h"
 #include "h9connector.h"
 
@@ -46,7 +46,7 @@ class H9SnifferConfigurator: public H9Configurator {
 
 } // namespace
 
-void print_reg_value(const ExtH9Frame& frame) {
+void print_reg_value(const H9Frame& frame) {
     if (frame.dlc() > 1) {
         std::cout << "    value: ";
         switch (frame.dlc()) {
@@ -73,36 +73,36 @@ void print_reg_value(const ExtH9Frame& frame) {
     }
 }
 
-void print_frame(const ExtH9Frame& frame) {
-    ExtH9Frame::Type type = frame.type();
-    std::cout << "    type name: " << ExtH9Frame::type_to_string(type) << std::endl;
-    if (type == ExtH9Frame::Type::REG_VALUE ||
-        type == ExtH9Frame::Type::REG_VALUE_BROADCAST ||
-        type == ExtH9Frame::Type::SET_REG ||
-        type == ExtH9Frame::Type::GET_REG) {
+void print_frame(const H9Frame& frame) {
+    H9Frame::Type type = frame.type();
+    std::cout << "    type name: " << H9Frame::type_to_string(type) << std::endl;
+    if (type == H9Frame::Type::REG_VALUE ||
+        type == H9Frame::Type::REG_VALUE_BROADCAST ||
+        type == H9Frame::Type::SET_REG ||
+        type == H9Frame::Type::GET_REG) {
 
         std::cout << "    reg: " << static_cast<unsigned int>(frame.data()[0]) << std::endl;
         print_reg_value(frame);
-    } else if (type == ExtH9Frame::Type::SET_BIT) {
+    } else if (type == H9Frame::Type::SET_BIT) {
         std::cout << "    reg: " << static_cast<unsigned int>(frame.data()[0]) << std::endl;
         std::cout << "    set bit: " << static_cast<unsigned int>(frame.data()[1]) << std::endl;
-    } else if (type == ExtH9Frame::Type::CLEAR_BIT) {
+    } else if (type == H9Frame::Type::CLEAR_BIT) {
         std::cout << "    reg: " << static_cast<unsigned int>(frame.data()[0]) << std::endl;
         std::cout << "    clear bit: " << static_cast<unsigned int>(frame.data()[1]) << std::endl;
-    } else if (type == ExtH9Frame::Type::NODE_TURNED_ON || type == ExtH9Frame::Type::NODE_INFO) {
+    } else if (type == H9Frame::Type::NODE_TURNED_ON || type == H9Frame::Type::NODE_INFO) {
         fmt::print("    node type: {:d}\n", (frame.data()[0] << 8 | frame.data()[1]));
         fmt::print("    node firmware: {:d}.{:d}{:c}\n", (frame.data()[2] << 8 | frame.data()[3]), (frame.data()[4] << 8 | frame.data()[5]), frame.data()[6]);
-        fmt::print("    node reset_reason {:d} ({})\n", frame.data()[7], ExtH9Frame::reset_reason_to_string(frame.data()[7]));
-    } else if (type == ExtH9Frame::Type::BOOTLOADER_TURNED_ON) {
+        fmt::print("    node reset_reason {:d} ({})\n", frame.data()[7], H9Frame::reset_reason_to_string(frame.data()[7]));
+    } else if (type == H9Frame::Type::BOOTLOADER_TURNED_ON) {
         fmt::print("    node type: {:d}\n", (frame.data()[0] << 8 | frame.data()[1]));
         fmt::print("    bootloader firmware: {:d}.{:d}\n", (frame.data()[2] << 8 | frame.data()[3]), (frame.data()[4] << 8 | frame.data()[5]));
-        fmt::print("    node mcu: {:d} ({})\n", frame.data()[6], ExtH9Frame::mcu_type_to_string(frame.data()[6]));
-        fmt::print("    mcu F: {:d} ({})\n", frame.data()[7], ExtH9Frame::mcu_f_type_to_string(frame.data()[7]));
-    } else if (type == ExtH9Frame::Type::COMMAND_ERROR) {
+        fmt::print("    node mcu: {:d} ({})\n", frame.data()[6], H9Frame::mcu_type_to_string(frame.data()[6]));
+        fmt::print("    mcu F: {:d} ({})\n", frame.data()[7], H9Frame::mcu_f_type_to_string(frame.data()[7]));
+    } else if (type == H9Frame::Type::COMMAND_ERROR) {
         int err_num = static_cast<int>(frame.data()[0]);
-        std::cout << "    error: " << err_num << " - " << ExtH9Frame::error_to_string(ExtH9Frame::from_underlying<ExtH9Frame::Error>(err_num)) << std::endl;
+        std::cout << "    error: " << err_num << " - " << H9Frame::error_to_string(H9Frame::from_underlying<H9Frame::Error>(err_num)) << std::endl;
     }
-    else if (type == ExtH9Frame::Type::NODE_SPECIFIC_BROADCAST0 && frame.broadcast_group() == 6) {
+    else if (type == H9Frame::Type::NODE_SPECIFIC_BROADCAST0 && frame.broadcast_group() == 6) {
         fmt::print("    atu ref: {:d}\n", (frame.data()[0] << 8 | frame.data()[1]));
         fmt::print("    atu fwd: {:d}\n", (frame.data()[2] << 8 | frame.data()[3]));
         fmt::print("    swr: {:.2f}\n", (frame.data()[4] << 8 | frame.data()[5]) / 1000.0f);
@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
     }
 
     while (true) {
-        ExtH9Frame frame;
+        H9Frame frame;
         try {
             if (bus->recv_frame(frame) <= BusDriver::SOCKET_CLOSE)
                 continue;
@@ -154,9 +154,9 @@ int main(int argc, char** argv) {
 
         if (output == 0) {
             if (frame.is_unicast())
-                fmt::print("{:d},{:d},{:d},{:d},{:d},,{:d},", ExtH9Frame::to_underlying(frame.type()), frame.source_id(), frame.destination_id(), ExtH9Frame::to_underlying(frame.flags()), frame.seqnum(), frame.dlc());
+                fmt::print("{:d},{:d},{:d},{:d},{:d},,{:d},", H9Frame::to_underlying(frame.type()), frame.source_id(), frame.destination_id(), H9Frame::to_underlying(frame.flags()), frame.seqnum(), frame.dlc());
             else
-                fmt::print("{:d},{:d},,,,{:d},{:d},", ExtH9Frame::to_underlying(frame.type()), frame.source_id(), frame.broadcast_group(), frame.dlc());
+                fmt::print("{:d},{:d},,,,{:d},{:d},", H9Frame::to_underlying(frame.type()), frame.source_id(), frame.broadcast_group(), frame.dlc());
             for (int i = 0; i < frame.dlc(); ++i) {
                 fmt::print("{:02X}", frame.data()[i]);
             }
@@ -164,15 +164,15 @@ int main(int argc, char** argv) {
         } else {
             if (frame.is_unicast()) {
                 fmt::print("{:d} -> {:d} type: {:d} ({}) seqnum: {:d} dlc: {:d} data: ", frame.source_id(), frame.destination_id(),
-                    static_cast<unsigned int>(ExtH9Frame::to_underlying(frame.type())),
-                    ExtH9Frame::type_to_string(frame.type()),
+                    static_cast<unsigned int>(H9Frame::to_underlying(frame.type())),
+                    H9Frame::type_to_string(frame.type()),
                     frame.seqnum(),
                     frame.dlc());
             }
             else {
                 fmt::print("{:d} -> [{:d}] type: {:d} ({}) dlc: {:d} data: ", frame.source_id(), frame.broadcast_group(),
-                    static_cast<unsigned int>(ExtH9Frame::to_underlying(frame.type())),
-                    ExtH9Frame::type_to_string(frame.type()),
+                    static_cast<unsigned int>(H9Frame::to_underlying(frame.type())),
+                    H9Frame::type_to_string(frame.type()),
                     frame.dlc());
             }
             for (int i = 0; i < frame.dlc(); ++i) {

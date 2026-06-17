@@ -42,15 +42,15 @@ void BusDriver::close() {
         ::close(socket_fd);
 }
 
-int BusDriver::send_frame(ExtH9Frame& frame) {
-    if (frame.type() == ExtH9Frame::Type::SET_REG ||
-        frame.type() == ExtH9Frame::Type::GET_REG ||
-        frame.type() == ExtH9Frame::Type::SET_BIT ||
-        frame.type() == ExtH9Frame::Type::CLEAR_BIT ||
-        frame.type() == ExtH9Frame::Type::NODE_UPGRADE ||
-        frame.type() == ExtH9Frame::Type::NODE_RESET) {
+int BusDriver::send_frame(H9Frame& frame) {
+    if (frame.type() == H9Frame::Type::SET_REG ||
+        frame.type() == H9Frame::Type::GET_REG ||
+        frame.type() == H9Frame::Type::SET_BIT ||
+        frame.type() == H9Frame::Type::CLEAR_BIT ||
+        frame.type() == H9Frame::Type::NODE_UPGRADE ||
+        frame.type() == H9Frame::Type::NODE_RESET) {
 
-        //if (frame.invalid_member() & ExtH9Frame::VALID_SEQNUM) {
+        //if (frame.invalid_member() & H9Frame::VALID_SEQNUM) {
             frame.seqnum(next_seqnum);
             next_seqnum = (next_seqnum + 1) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
         //}
@@ -58,6 +58,6 @@ int BusDriver::send_frame(ExtH9Frame& frame) {
     return send_data(frame);
 }
 
-int BusDriver::recv_frame(ExtH9Frame& frame) {
+int BusDriver::recv_frame(H9Frame& frame) {
     return recv_data(frame);
 }

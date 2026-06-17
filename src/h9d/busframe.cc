@@ -17,7 +17,7 @@
 
 // BusFrame::BusFrame(const h9frame_t& frame, const std::string& origin, std::uint64_t orgin_client_id, std::uint64_t orgin_msg_id):
 //     _local_frame(false),
-//     ExtH9Frame(frame, origin),
+//     H9Frame(frame, origin),
 //     orgin_client_id(orgin_client_id),
 //     orgin_msg_id(orgin_msg_id) {
 //     _number_of_active_bus = 0;
@@ -28,9 +28,9 @@
 //     //SPDLOG_TRACE("BusFrame id: {}; origin: {}", fmt::ptr(this), this->origin());
 // }
 
-BusFrame::BusFrame(ExtH9Frame&& a, bool raw) noexcept:
+BusFrame::BusFrame(H9Frame&& a, bool raw) noexcept:
     _local_frame(false),
-    ExtH9Frame(std::move(a)),
+    H9Frame(std::move(a)),
     _raw(raw) {
     _number_of_active_bus = 0;
     _send_counter = 0;

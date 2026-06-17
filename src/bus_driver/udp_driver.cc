@@ -79,13 +79,13 @@ int UDPDriver::open() {
     return socket_fd;
 }
 
-int UDPDriver::recv_data(ExtH9Frame& frame) {
+int UDPDriver::recv_data(H9Frame& frame) {
     sockaddr_storage remote_addr;
     socklen_t len = sizeof(remote_addr);
 
-    std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
+    std::uint8_t buf[H9Frame::SERIALIZATION_LENGTH];
 
-    ssize_t ret = recvfrom(socket_fd, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0, (struct sockaddr*)&remote_addr, &len);
+    ssize_t ret = recvfrom(socket_fd, buf, H9Frame::SERIALIZATION_LENGTH, 0, (struct sockaddr*)&remote_addr, &len);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
@@ -96,8 +96,8 @@ int UDPDriver::recv_data(ExtH9Frame& frame) {
     return ret != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
-int UDPDriver::send_data(ExtH9Frame& frame) {
-    ssize_t ret = sendto(socket_fd, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0, remote->ai_addr, remote->ai_addrlen);
+int UDPDriver::send_data(H9Frame& frame) {
+    ssize_t ret = sendto(socket_fd, frame.serialize().data(), H9Frame::SERIALIZATION_LENGTH, 0, remote->ai_addr, remote->ai_addrlen);
 
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));

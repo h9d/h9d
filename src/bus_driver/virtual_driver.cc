@@ -25,10 +25,10 @@ int VirtualDriver::open() {
     return socket_fd;
 }
 
-int VirtualDriver::recv_data(ExtH9Frame& frame) {
-    std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
+int VirtualDriver::recv_data(H9Frame& frame) {
+    std::uint8_t buf[H9Frame::SERIALIZATION_LENGTH];
 
-    ssize_t ret = recv(socket_fd, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0);
+    ssize_t ret = recv(socket_fd, buf, H9Frame::SERIALIZATION_LENGTH, 0);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
@@ -37,8 +37,8 @@ int VirtualDriver::recv_data(ExtH9Frame& frame) {
     return ret != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
-int VirtualDriver::send_data(ExtH9Frame& frame) {
-    int ret = send(socket_fd, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0);
+int VirtualDriver::send_data(H9Frame& frame) {
+    int ret = send(socket_fd, frame.serialize().data(), H9Frame::SERIALIZATION_LENGTH, 0);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }

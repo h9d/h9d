@@ -65,7 +65,7 @@ class Node: protected RawNode {
     void add_dependent_devices(Dev *dev);
     void del_dependent_devices(Dev *dev);
 
-    void on_frame_recv(const ExtH9Frame& frame);
+    void on_frame_recv(const H9Frame& frame);
 
     ~Node();
     std::vector<RegisterDsc> get_registers_list() noexcept;
@@ -94,7 +94,7 @@ class Node: protected RawNode {
     /// @param[in] frame
     /// @param[out] value
     /// @return Reg number or 0 when it is not reg value frame
-    std::uint8_t get_reg_value_from_frame(const ExtH9Frame& frame, regvalue_t* value);
+    std::uint8_t get_reg_value_from_frame(const H9Frame& frame, regvalue_t* value);
 };
 
 #endif // H9_NODE_H

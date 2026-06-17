@@ -22,7 +22,7 @@ void PowerSwitch::periodic_task() {
 }
 
 bool PowerSwitch::is_init() {
-    return switch_id <= ExtH9Frame::ID_MAX_VALUE;
+    return switch_id <= H9Frame::ID_MAX_VALUE;
 }
 
 void PowerSwitch::init() {
@@ -55,7 +55,7 @@ void PowerSwitch::on_dev_register_value(std::uint16_t node_id, uint8_t reg, Node
     //                    {"antennas_name", std::vector<std::string>(antenna_name, &antenna_name[number_of_antenna])}});
 }
 
-//void PowerSwitch::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {
+//void PowerSwitch::update_dev_state(std::uint16_t node_id, const H9Frame& frame) {
 //    SPDLOG_INFO("@{} update_dev_state", name);
 //
 //    emit_dev_state({{"selected_antenna", selected_antenna},

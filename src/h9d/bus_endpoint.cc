@@ -50,7 +50,7 @@ int BusEndpoint::send_frame(std::shared_ptr<BusFrame> busframe) {
 int BusEndpoint::recv_frame(BusFrame** busframe) {
     assert(*busframe == nullptr);
 
-    ExtH9Frame frame;
+    H9Frame frame;
     int ret = driver->recv_frame(frame);
     if (ret >= BusDriver::RECV_FRAME) {
         *busframe = new BusFrame(std::move(frame), false);

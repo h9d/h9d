@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include <queue>
 #include <mutex>
 #include <semaphore>
@@ -22,7 +22,7 @@ class DevWorkers {
         } task_type;
         Dev* dev;
         std::uint16_t node_id;
-        ExtH9Frame frame;
+        H9Frame frame;
     };
 
     bool _run;
@@ -37,5 +37,5 @@ class DevWorkers {
     DevWorkers();
     void create_devs_workers(int workers);
     void dev_periodic_task(Dev* dev);
-    void update_dev_state(Dev* dev, std::uint16_t node_id, const ExtH9Frame& frame);
+    void update_dev_state(Dev* dev, std::uint16_t node_id, const H9Frame& frame);
 };

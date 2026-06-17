@@ -13,7 +13,7 @@
 #include <spdlog/spdlog.h>
 #include <unistd.h>
 
-#include "ext_h9frame.h"
+#include "h9_frame.h"
 #include "h9_configurator.h"
 #include "h9connector.h"
 
@@ -27,7 +27,7 @@ class H9SendConfigurator: public H9Configurator {
                 ("s,src_id", "Source id, if set, a raw frame will be sent", cxxopts::value<std::uint8_t>())
                 ("d,dst_id", "Destination id", cxxopts::value<std::uint8_t>())
                 ("S,seqnum", "Seqnum, if set, a raw frame will be sent", cxxopts::value<std::uint8_t>())
-                ("t,type", "Frame type", cxxopts::value<std::underlying_type_t<ExtH9Frame::Type>>())
+                ("t,type", "Frame type", cxxopts::value<std::underlying_type_t<H9Frame::Type>>())
                 ("r,repeat", "Repeat the frame every given time in seconds", cxxopts::value<unsigned int>())
                 ;
         // clang-format on
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     h9.logger_setup();
     h9.load_configuration();
 
-    ExtH9Frame frame;
+    H9Frame frame;
     bool raw = false;
 
     if (res.count("src_id")) {
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (res.count("type")) {
-        frame.type(static_cast<ExtH9Frame::Type>(res["type"].as<std::underlying_type_t<ExtH9Frame::Type>>()));
+        frame.type(static_cast<H9Frame::Type>(res["type"].as<std::underlying_type_t<H9Frame::Type>>()));
     }
 
     frame.dlc(0);
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
                 SPDLOG_ERROR("Can not send message: {}.", e.what());
                 exit(EXIT_FAILURE);
             }
-            frame.seqnum(ExtH9Frame::SEQNUM_MAX_VALUE + 1); //unvalid seqnum
+            frame.seqnum(H9Frame::SEQNUM_MAX_VALUE + 1); //unvalid seqnum
             sleep(sleep_time);
         }
     }

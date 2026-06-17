@@ -121,15 +121,15 @@ nlohmann::json Dev::call_dev_method(const TCPClientThread* client_thread, const 
     }
 }
 
-void Dev::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {
-    if (frame.type() == ExtH9Frame::Type::NODE_INFO || frame.type() == ExtH9Frame::Type::NODE_TURNED_ON) {
+void Dev::update_dev_state(std::uint16_t node_id, const H9Frame& frame) {
+    if (frame.type() == H9Frame::Type::NODE_INFO || frame.type() == H9Frame::Type::NODE_TURNED_ON) {
         uint16_t node_type = frame.data()[0] << 8 | frame.data()[1];
         uint16_t version_major = frame.data()[2] << 8 | frame.data()[3];
         uint16_t version_minor = frame.data()[4] << 8 | frame.data()[5];
 
         on_dev_info(node_id, node_type, version_major, version_minor, frame.data()[6]);
     }
-    else if (frame.type() == ExtH9Frame::Type::REG_VALUE || frame.type() == ExtH9Frame::Type::REG_VALUE_BROADCAST) {
+    else if (frame.type() == H9Frame::Type::REG_VALUE || frame.type() == H9Frame::Type::REG_VALUE_BROADCAST) {
         Node::regvalue_t value;
         try {
             node_mgr->get_reg_value_from_frame(node_id, frame, &value);
@@ -139,10 +139,10 @@ void Dev::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {
             SPDLOG_ERROR("Cannot read register value: {}", e.what());
         }
     }
-    else if (frame.type() == ExtH9Frame::Type::COMMAND_ERROR) {
+    else if (frame.type() == H9Frame::Type::COMMAND_ERROR) {
         on_dev_error(node_id, frame.data()[0]);
     }
-    else if (ExtH9Frame::Type::NODE_SPECIFIC_BROADCAST0 <= frame.type() && frame.type() <= ExtH9Frame::Type::NODE_SPECIFIC_BROADCAST7) {
+    else if (H9Frame::Type::NODE_SPECIFIC_BROADCAST0 <= frame.type() && frame.type() <= H9Frame::Type::NODE_SPECIFIC_BROADCAST7) {
         on_dev_bulk(node_id, frame.type(), frame.dlc(), frame.data());
     }
 }

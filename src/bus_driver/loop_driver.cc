@@ -35,14 +35,14 @@ int LoopDriver::open() {
     return socket_fd;
 }
 
-int LoopDriver::recv_data(ExtH9Frame& frame) {
+int LoopDriver::recv_data(H9Frame& frame) {
     sockaddr_in tmp_addr;
     socklen_t len = sizeof(tmp_addr);
     bcopy(&loopback_addr, &tmp_addr, len);
 
-    std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
+    std::uint8_t buf[H9Frame::SERIALIZATION_LENGTH];
 
-    int ret = recvfrom(socket_fd, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0, (struct sockaddr*)&tmp_addr, &len);
+    int ret = recvfrom(socket_fd, buf, H9Frame::SERIALIZATION_LENGTH, 0, (struct sockaddr*)&tmp_addr, &len);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
@@ -53,8 +53,8 @@ int LoopDriver::recv_data(ExtH9Frame& frame) {
     return ret != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
-int LoopDriver::send_data(ExtH9Frame& frame) {
-    int ret = sendto(socket_fd, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0, (const struct sockaddr*)&loopback_addr, sizeof(loopback_addr));
+int LoopDriver::send_data(H9Frame& frame) {
+    int ret = sendto(socket_fd, frame.serialize().data(), H9Frame::SERIALIZATION_LENGTH, 0, (const struct sockaddr*)&loopback_addr, sizeof(loopback_addr));
 
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));

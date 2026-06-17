@@ -53,7 +53,7 @@ int SocketCANDriver::open() {
     return socket_fd;
 }
 
-int SocketCANDriver::recv_data(ExtH9Frame& frame) {
+int SocketCANDriver::recv_data(H9Frame& frame) {
     struct can_frame can_msg;
 
     size_t nbyte = read(socket_fd, &can_msg, sizeof(can_frame));
@@ -69,7 +69,7 @@ int SocketCANDriver::recv_data(ExtH9Frame& frame) {
     return nbyte != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
-int SocketCANDriver::send_data(ExtH9Frame& frame) {
+int SocketCANDriver::send_data(H9Frame& frame) {
     struct can_frame can_msg;
     memset(&can_msg, 0, sizeof(struct can_frame));
 

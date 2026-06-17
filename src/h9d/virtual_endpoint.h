@@ -53,5 +53,5 @@ class VirtualEndpoint {
     bool is_configured();
 
     void activate();
-    void send_frame(const ExtH9Frame& frame);
+    void send_frame(const H9Frame& frame);
 };

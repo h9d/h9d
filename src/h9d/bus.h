@@ -84,6 +84,6 @@ class Bus: public FrameSubject {
     /// @param[in] frame to sent
     /// @param[in] raw is true Bus don't set source_id and seqnum
     /// @return seqnum of the sent frame
-    int send_frame(ExtH9Frame frame, bool raw = false);
-    std::future<SendFrameResult> send_frame_noblock(ExtH9Frame frame, bool raw = false);
+    int send_frame(H9Frame frame, bool raw = false);
+    std::future<SendFrameResult> send_frame_noblock(H9Frame frame, bool raw = false);
 };

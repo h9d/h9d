@@ -30,9 +30,9 @@ class RawNode {
         RawNode* const node;
         bool comparator_has_seqnum;
         H9FrameComparator comparator;
-        std::queue<ExtH9Frame> frame_storage;
+        std::queue<H9Frame> frame_storage;
 
-        std::promise<ExtH9Frame> promise;
+        std::promise<H9Frame> promise;
 
       public:
         FramePromise(RawNode* node, H9FrameComparator comparator):
@@ -41,7 +41,7 @@ class RawNode {
             comparator(comparator) {}
 
         /// @return Return true on full match - FramePromise can be deleted
-        bool on_frame(const ExtH9Frame& frame) {
+        bool on_frame(const H9Frame& frame) {
             if (comparator == frame) {
                 if (comparator_has_seqnum) {
                     try {
@@ -73,7 +73,7 @@ class RawNode {
             node->frame_promise_set_mtx.unlock();
         }
 
-        std::future<ExtH9Frame> get_future() {
+        std::future<H9Frame> get_future() {
             return promise.get_future();
         }
     };
@@ -86,7 +86,7 @@ class RawNode {
     FramePromise* create_frame_promise(H9FrameComparator comparator);
     void destroy_frame_promise(FramePromise* frame_promise);
 
-    ssize_t bit_operation(const std::string& origin, ExtH9Frame::Type type, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
+    ssize_t bit_operation(const std::string& origin, H9Frame::Type type, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
 
   protected:
     NodeMgr* const node_mgr;
@@ -102,7 +102,7 @@ class RawNode {
 
     ~RawNode() = default;
 
-    void on_frame_recv(const ExtH9Frame& frame);
+    void on_frame_recv(const H9Frame& frame);
 
     std::uint16_t node_id() const noexcept;
 
@@ -139,7 +139,7 @@ class RawNode {
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, std::uint32_t* reg_val);
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, float* reg_val);
 
-    static int parse_node_info_frame(const ExtH9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason);
+    static int parse_node_info_frame(const H9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason);
 };
 
 #endif // H9_RAW_NODE_H
