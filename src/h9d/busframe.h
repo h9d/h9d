@@ -31,11 +31,11 @@ class BusFrame: public ExtH9Frame {
     bool _raw;
     bool _activate_promise;
   public:
-    BusFrame();
+    BusFrame() = delete;
     BusFrame(BusFrame&& a) = default;
     // BusFrame(const BusFrame&) = delete;
     // BusFrame& operator=(const BusFrame&) = delete;
-    BusFrame(const h9frame_t& frame, const std::string& origin, std::uint64_t orgin_client_id, std::uint64_t orgin_msg_id);
+    //BusFrame(const h9frame_t& frame, const std::string& origin, std::uint64_t orgin_client_id, std::uint64_t orgin_msg_id);
     BusFrame(ExtH9Frame&& a, bool raw) noexcept;
     BusFrame& operator=(BusFrame&& a) = default;
 
@@ -77,13 +77,14 @@ struct spdlog::fmt_lib::formatter<SimpleJSONBusFrameWraper>: spdlog::fmt_lib::fo
 
         if (frame.busframe->is_unicast()) {
             return spdlog::fmt_lib::format_to(ctx.out(),
-                                              R"("origin": "{}", "frame": {{"type": {}, "type_name": "{}", "source_id": {}, "seqnum": {}, "destination_id": {}, "dlc": {}, "data": [{}]}})",
+                                              R"("origin": "{}", "frame": {{"type": {}, "type_name": "{}", "source_id": {}, "flags": {}, "destination_id": {}, "seqnum": {}, "dlc": {}, "data": [{}]}})",
                                               frame.busframe->origin(),
                                               ExtH9Frame::to_underlying(frame.busframe->type()),
                                               ExtH9Frame::type_to_string(frame.busframe->type()),
                                               frame.busframe->source_id(),
-                                              frame.busframe->seqnum(),
+                                              ExtH9Frame::to_underlying(frame.busframe->flags()),
                                               frame.busframe->destination_id(),
+                                              frame.busframe->seqnum(),
                                               frame.busframe->dlc(),
                                               data_table.str());
         }

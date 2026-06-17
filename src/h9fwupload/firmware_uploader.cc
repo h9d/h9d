@@ -95,7 +95,8 @@ void FirmwareUploader::upload(BusDriver* bus) {
             frame.destination_id(node_id);
             frame.dlc(8);
 
-            frame.data({&firmware[fw_idx], &firmware[fw_idx + 8]});
+            //frame.data({&firmware[fw_idx], &firmware[fw_idx + 8]});
+            frame.data(&firmware[fw_idx]);
             fw_idx += 8;
 
             bus->send_frame(frame);

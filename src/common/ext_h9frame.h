@@ -9,35 +9,17 @@
 #pragma once
 
 #include <chrono>
-#include <h9def.h>
-#include <h9frame.h>
 #include <nlohmann/json.hpp>
 #include <string>
+
+namespace {
+#include <h9def.h>
+}
 
 #include "types.h"
 
 class ExtH9Frame {
-  private:
-    h9frame_t _frame;
-    std::string _origin;
-
-    unsigned int valid;
-
-    timestamp_t _creation_timestamp;
-
   public:
-    constexpr static unsigned int VALID_ORIGIN = 1 << 0;
-    constexpr static unsigned int VALID_TYPE = 1 << 1;
-    constexpr static unsigned int VALID_SEQNUM = 1 << 2;
-    constexpr static unsigned int VALID_DESTINATION_ID = 1 << 3;
-    constexpr static unsigned int VALID_BROADCAST_GROUP = 1 << 4;
-    constexpr static unsigned int VALID_SOURCE_ID = 1 << 5;
-    constexpr static unsigned int VALID_DLC = 1 << 6;
-    constexpr static unsigned int VALID_DATA = 1 << 7;
-
-    constexpr static unsigned int VALID_ALL = (VALID_ORIGIN | VALID_TYPE | VALID_SEQNUM | VALID_DESTINATION_ID | VALID_SOURCE_ID | VALID_DLC | VALID_DATA);
-    constexpr static unsigned int VALID_UNUSED = ~VALID_ALL;
-
     enum class Type : std::uint8_t {
         RES1 = H9FRAME_TYPE_RES1,
         PAGE_START = H9FRAME_TYPE_PAGE_START,
@@ -55,8 +37,10 @@ class ExtH9Frame {
         CLEAR_BIT = H9FRAME_TYPE_CLEAR_BIT,
         NODE_UPGRADE = H9FRAME_TYPE_NODE_UPGRADE,
         NODE_RESET = H9FRAME_TYPE_NODE_RESET,
+        /* --- SPECIAL BROADCAST --- */
         DISCOVER = H9FRAME_TYPE_DISCOVER,
         GROUP_RESET = H9FRAME_TYPE_GROUP_RESET,
+        /* --- BROADCAST --- */
         NODE_FAULT = H9FRAME_TYPE_NODE_FAULT,
         REG_VALUE_BROADCAST = H9FRAME_TYPE_REG_VALUE_BROADCAST,
         NODE_HEARTBEAT = H9FRAME_TYPE_NODE_HEARTBEAT,
@@ -73,6 +57,13 @@ class ExtH9Frame {
         NODE_SPECIFIC_BROADCAST7 = H9FRAME_TYPE_NODE_SPECIFIC_BROADCAST7
     };
 
+    enum class Flags : std::uint8_t {
+        SINGE_FRAME = H9FRAME_FLAG_SINGE_FRAME,
+        MULTI_FRAME_FIRST = H9FRAME_FLAG_MULTI_FRAME_FIRST,
+        MULTI_FRAME_MIDDLE = H9FRAME_FLAG_MULTI_FRAME_MIDDLE,
+        MULTI_FRAME_LAST = H9FRAME_FLAG_MULTI_FRAME_LAST
+    };
+
     enum class Error : std::uint8_t {
         INVALID_FRAME = H9FRAME_ERROR_INVALID_FRAME,
         BOOTLOADER_UNSUPPORTED = H9FRAME_ERROR_BOOTLOADER_UNSUPPORTED,
@@ -84,15 +75,34 @@ class ExtH9Frame {
         REGISTER_SIZE_MISMATCH = H9FRAME_ERROR_REGISTER_SIZE_MISMATCH,
     };
 
-    constexpr static int H9FRAME_DESTINATION_ID_BIT_LENGTH = H9FRAME_ID_BIT_LENGTH;
-    constexpr static int H9FRAME_SOURCE_ID_BIT_LENGTH = H9FRAME_ID_BIT_LENGTH;
     constexpr static std::uint16_t BROADCAST_ID = H9FRAME_BROADCAST_ID;
-    constexpr static int H9FRAME_TYPE_MAX_VALUE = (1 << H9FRAME_TYPE_BIT_LENGTH) - 1;
-    constexpr static int H9FRAME_SEQNUM_MAX_VALUE = (1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1;
-    constexpr static int H9FRAME_DESTINATION_ID_MAX_VALUE = (1 << H9FRAME_DESTINATION_ID_BIT_LENGTH) - 1;
-    constexpr static int H9FRAME_SOURCE_ID_MAX_VALUE = (1 << H9FRAME_SOURCE_ID_BIT_LENGTH) - 1;
-    constexpr static int H9FRAME_DATA_LENGTH = 8;
 
+    constexpr static int MAX_DATA_LENGTH = 8;
+    constexpr static int SERIALIZATION_LENGTH = 4 + 1 + MAX_DATA_LENGTH;
+    constexpr static int TYPE_BIT_LENGTH = H9FRAME_TYPE_BIT_LENGTH;
+    constexpr static int FLAGS_BITS_LENGTH = H9FRAME_FLAGS_BITS_LENGTH;
+    constexpr static int SEQNUM_BIT_LENGTH = H9FRAME_SEQNUM_BIT_LENGTH;
+    constexpr static int ID_BIT_LENGTH = H9FRAME_ID_BIT_LENGTH;
+    constexpr static int BROADCAST_GROUP_BIT_LENGTH = H9FRAME_BROADCAST_GROUP_BIT_LENGTH;
+
+    constexpr static int TYPE_MAX_VALUE = (1 << H9FRAME_TYPE_BIT_LENGTH) - 1;
+    constexpr static int SEQNUM_MAX_VALUE = (1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1;
+    constexpr static int ID_MAX_VALUE = (1 << H9FRAME_ID_BIT_LENGTH) - 1;
+
+  private:
+    std::string _origin;
+    timestamp_t _creation_timestamp;
+
+    Type _type;
+    uint8_t _source_id;
+    Flags _flags;
+    uint8_t _destination_id;
+    uint8_t _seqnum;
+    uint16_t _group;
+    uint8_t _dlc;
+    uint8_t _data[8];
+
+  public:
     template<typename E, typename R = std::underlying_type_t<E>>
     static R to_underlying(E e) noexcept {
         return static_cast<R>(e);
@@ -110,46 +120,54 @@ class ExtH9Frame {
     static const char* reset_reason_to_string(std::uint8_t reset_reason);
 
     ExtH9Frame();
-    ExtH9Frame(const h9frame_t& frame, const std::string& origin);
-    ExtH9Frame(const std::string& origin, ExtH9Frame::Type type, std::uint16_t dst, std::uint8_t dlc = 0, const std::vector<std::uint8_t>& data = {});
+    //ExtH9Frame(const std::string& origin, uint32_t can_id, std::uint8_t dlc = 0, const std::array<std::uint8_t, MAX_DATA_LENGTH>& data = {});
+    //ExtH9Frame(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]);
 
-    unsigned int valid_member();
-    unsigned int invalid_member();
+    ExtH9Frame(const std::string& origin, Type type, Flags flags, std::uint8_t dst, const std::vector<std::uint8_t>& data = {});
+    ExtH9Frame(const std::string& origin, Type type, std::uint16_t broadcast_group, const std::vector<std::uint8_t>& data = {});
+    // ExtH9Frame(const std::string& origin, ExtH9Frame::Type type, std::uint16_t dst, const std::vector<std::uint8_t>& data = {});
 
-    timestamp_t creation_timestamp() const { return _creation_timestamp; }
+    [[nodiscard]] std::uint32_t can_id() const;
+    void can_id(std::uint32_t can_id);
 
-    const h9frame_t& frame() const { return _frame; }
+    [[nodiscard]] std::array<uint8_t, SERIALIZATION_LENGTH> serialize() const;
+    void deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc = 0, const std::vector<std::uint8_t>& data = {});
+    void deserialize(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]);
 
-    const std::string& origin() const { return _origin; }
+    [[nodiscard]] timestamp_t creation_timestamp() const { return _creation_timestamp; }
 
-    ExtH9Frame::Type type() const { return ExtH9Frame::from_underlying<ExtH9Frame::Type>(_frame.type); }
-
-    std::uint8_t flags() const { return _frame.unicast.flags; }
-
-    std::uint8_t seqnum() const { return _frame.unicast.seqnum; }
-
-    std::uint8_t destination_id() const { return _frame.unicast.destination_id; }
-
-    std::uint16_t broadcast_group() const { return _frame.broadcast.group; }
-
-    std::uint8_t source_id() const { return _frame.source_id; }
-
-    std::uint8_t dlc() const { return _frame.dlc; }
-
-    const std::uint8_t* data() const { return _frame.data; };
+    [[nodiscard]] const std::string& origin() const { return _origin; }
+    [[nodiscard]] ExtH9Frame::Type type() const { return _type; }
+    [[nodiscard]] std::uint8_t raw_type() const { return to_underlying(_type); }
+    [[nodiscard]] std::uint8_t source_id() const { return _source_id; }
+    [[nodiscard]] std::uint8_t seqnum() const { return _seqnum; }
+    [[nodiscard]] std::uint8_t destination_id() const { return _destination_id; }
+    [[nodiscard]] Flags flags() const { return _flags; }
+    [[nodiscard]] std::uint8_t raw_flags() const { return to_underlying(_flags); }
+    [[nodiscard]] std::uint16_t broadcast_group() const { return _group; }
+    [[nodiscard]] std::uint8_t dlc() const { return _dlc; }
+    [[nodiscard]] const std::uint8_t* data() const { return _data; }
 
     void origin(const std::string& origin);
     void type(ExtH9Frame::Type type);
     void type(std::uint8_t type);
+    void source_id(std::uint8_t source_id);
     void seqnum(std::uint8_t seqnum);
     void destination_id(std::uint8_t destination_id);
+    void flags(Flags flags);
+    void flags(std::uint8_t  flags);
     void broadcast_group(std::uint16_t broadcast_group);
-    void source_id(std::uint8_t source_id);
+
     void dlc(std::uint8_t dlc);
     void data(const std::vector<std::uint8_t>& data);
+    void data(const std::uint8_t data[MAX_DATA_LENGTH]);
+    uint8_t* data_raw();
+    //void data(const std::array<std::uint8_t, MAX_DATA_LENGTH>& data);
 
     bool is_unicast() const;
     bool is_broadcast() const;
+
+    bool is_valid() const;
 };
 
 void to_json(nlohmann::json& j, const ExtH9Frame& f);

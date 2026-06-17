@@ -22,7 +22,7 @@ void ATU::periodic_task() {
 }
 
 bool ATU::is_init() {
-    return atu_id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE;
+    return atu_id <= ExtH9Frame::ID_MAX_VALUE;
 }
 
 void ATU::init() {
@@ -33,7 +33,7 @@ void ATU::init() {
         char hardware_revision;
 
         try {
-            node_mgr->node_discovery(node, node_type, version_major, version_minor, hardware_revision);
+            //node_mgr->node_discovery(node, node_type, version_major, version_minor, hardware_revision);
         }
         catch (...) {
             continue;

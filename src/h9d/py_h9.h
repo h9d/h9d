@@ -9,12 +9,12 @@
 #pragma once
 
 #include <Python.h>
-#include "h9frame.h"
+#include "ext_h9frame.h"
 
 typedef struct {
     PyObject_HEAD
-        h9frame_t frame;
+        ExtH9Frame frame;
 } PyH9frame;
 
 PyMODINIT_FUNC PyInit_h9(void);
-PyObject* PyH9Frame_New(const h9frame_t& frame);
+PyObject* PyH9Frame_New(const ExtH9Frame& frame);

@@ -47,11 +47,13 @@ int BusEndpoint::send_frame(std::shared_ptr<BusFrame> busframe) {
     return driver->send_frame(*busframe);
 }
 
-int BusEndpoint::recv_frame(BusFrame* busframe) {
-    ExtH9Frame ext_frame;
-    int ret = driver->recv_frame(ext_frame);
+int BusEndpoint::recv_frame(BusFrame** busframe) {
+    assert(*busframe == nullptr);
+
+    ExtH9Frame frame;
+    int ret = driver->recv_frame(frame);
     if (ret >= BusDriver::RECV_FRAME) {
-        *busframe = BusFrame(ext_frame.frame(), name, 0, 0);
+        *busframe = new BusFrame(std::move(frame), false);
         ++received_frames_counter;
     }
     return ret;

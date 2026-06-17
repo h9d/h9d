@@ -48,18 +48,19 @@ int PipeDriver::open() {
 }
 
 int PipeDriver::recv_data(ExtH9Frame& frame) {
-    h9frame_t h9frame = {};
-    ssize_t ret = recv(socket_fd, &h9frame, sizeof(h9frame_t), 0);
+    std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
+
+    ssize_t ret = recv(socket_fd, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
     if (ret != 0)
-        frame = ExtH9Frame(h9frame, "");
+        frame.deserialize(name, buf);
     return ret != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
 int PipeDriver::send_data(ExtH9Frame& frame) {
-    ssize_t ret = sendto(socket_fd, &frame.frame(), sizeof(h9frame_t), 0,
+    ssize_t ret = sendto(socket_fd, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0,
                          reinterpret_cast<const sockaddr*>(&remote_addr), sizeof(remote_addr));
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));

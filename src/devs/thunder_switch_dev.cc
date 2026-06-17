@@ -22,7 +22,7 @@ void ThunderSwitchDev::periodic_task() {
 }
 
 bool ThunderSwitchDev::is_init() {
-    return switch_id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE;
+    return switch_id <= ExtH9Frame::ID_MAX_VALUE;
 }
 
 //void ThunderSwitchDev::update_dev_state(std::uint16_t node_id, const ExtH9Frame& frame) {

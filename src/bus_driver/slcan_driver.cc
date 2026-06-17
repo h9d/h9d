@@ -84,60 +84,42 @@ int SlcanDriver::open() {
     return socket_fd;
 }
 
-std::string SlcanDriver::build_slcan_msg(const h9frame_t& frame) {
-    uint32_t id = 0;
-    id |= frame.type & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1);
-    id <<= H9FRAME_ID_BIT_LENGTH;
-    id |= frame.source_id & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
-    id <<= H9FRAME_FLAGS_BITS_LENGTH;
-    id |= frame.unicast.flags & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1);
-    id <<= H9FRAME_ID_BIT_LENGTH;
-    id |= frame.unicast.destination_id & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
-    id <<= H9FRAME_SEQNUM_BIT_LENGTH;
-    id |= frame.unicast.seqnum & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
+std::string SlcanDriver::build_slcan_msg(const ExtH9Frame& frame) {
+    uint32_t id = frame.can_id();
 
     std::ostringstream buf;
     buf << 'T';
     buf << std::setfill('0') << std::hex;
     buf << std::setw(8) << id;
-    buf << std::setw(1) << static_cast<std::uint32_t>(frame.dlc);
-    for (int i = 0; i < frame.dlc; ++i) {
-        buf << std::setw(2) << static_cast<std::uint32_t>(frame.data[i]);
+    buf << std::setw(1) << static_cast<std::uint32_t>(frame.dlc());
+    for (int i = 0; i < frame.dlc(); ++i) {
+        buf << std::setw(2) << static_cast<std::uint32_t>(frame.data()[i]);
     }
     buf << "\r";
     return buf.str();
 }
 
-bool SlcanDriver::parse_slcan_msg(const std::string& slcan_data, h9frame_t* frame) {
+bool SlcanDriver::parse_slcan_msg(const std::string& slcan_data, ExtH9Frame* frame) {
     if (slcan_data.size() < 10)
         return false;
 
-    h9frame_t res = {};
-
     uint32_t id = std::stoi(slcan_data.substr(1, 8), nullptr, 16);
+    uint8_t dlc = std::stoi(slcan_data.substr(9, 1), nullptr, 16);
 
-    res.type = (uint8_t)((id >> (H9FRAME_ID_BIT_LENGTH + H9FRAME_FLAGS_BITS_LENGTH + H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1));
-
-    res.source_id = static_cast<std::uint8_t>((id >> (H9FRAME_FLAGS_BITS_LENGTH + H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_ID_BIT_LENGTH) - 1));
-
-    res.unicast.flags = (uint8_t)((id >> (H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1));
-
-    res.unicast.destination_id = static_cast<std::uint8_t>((id >> H9FRAME_SEQNUM_BIT_LENGTH) & ((1 << H9FRAME_ID_BIT_LENGTH) - 1));
-
-    res.unicast.seqnum = static_cast<std::uint8_t>((id >> 0) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1));
-
-    uint32_t dlc = std::stoi(slcan_data.substr(9, 1), nullptr, 16);
-    res.dlc = static_cast<std::uint8_t>(dlc);
-
-    if (slcan_data.size() < (10 + 2*res.dlc))
+    if (slcan_data.size() < (10 + 2*dlc))
         return false;
+
+    uint8_t buf[ExtH9Frame::MAX_DATA_LENGTH];
 
     for (int i = 0; i < dlc; ++i) {
         uint32_t tmp = std::stoi(slcan_data.substr(10 + i * 2, 2), nullptr, 16);
-        res.data[i] = static_cast<std::uint8_t>(tmp);
+        buf[i] = static_cast<std::uint8_t>(tmp);
     }
 
-    *frame = res;
+    frame->can_id(id);
+    frame->dlc(dlc);
+    frame->data(buf);
+
     return true;
 }
 
@@ -162,7 +144,7 @@ int SlcanDriver::recv_data(ExtH9Frame& frame) {
         }
     }
     if (!recv_queue.empty()) {
-        frame = ExtH9Frame(recv_queue.front(), "");
+        frame = recv_queue.front();
         recv_queue.pop();
 
         return recv_queue.empty() ? RECV_FRAME : RECV_FRAME_DATA_IN_BUF;
@@ -171,7 +153,7 @@ int SlcanDriver::recv_data(ExtH9Frame& frame) {
 }
 
 int SlcanDriver::send_data(ExtH9Frame& frame) {
-    std::string buf = build_slcan_msg(frame.frame());
+    std::string buf = build_slcan_msg(frame);
     ssize_t nbyte = write(socket_fd, buf.c_str(), buf.size());
     // std::cout << "send raw: " << buf.c_str() << std::endl;
     if (nbyte <= 0) {
@@ -202,9 +184,11 @@ void SlcanDriver::parse_buf() {
         //SPDLOG_LOGGER_ERROR(logger, "[BELL]");
     }
     else if (recv_buf[0] == 'T') {
-        h9frame_t frame;
-        if (parse_slcan_msg(recv_buf, &frame))
+        ExtH9Frame frame;
+        if (parse_slcan_msg(recv_buf, &frame)) {
+            frame.origin(name);
             recv_queue.push(frame);
+        }
         else {
             SPDLOG_LOGGER_ERROR(logger, "Recv malformed SLCAN command: '{}' from {}.", recv_buf.replace(recv_buf.find('\r'), 1, "\\r"), name);
         }

@@ -59,7 +59,8 @@ int H9DDriver::recv_data(ExtH9Frame& frame) {
     }
 
     if (json.contains("method") && json["method"] == "on_frame") {
-        frame = json["params"]["frame"].get<ExtH9Frame>();
+        frame.origin(name);
+        json["params"]["frame"].get_to(frame);
         return RECV_FRAME;
     }
     return EMPTY_BUF;

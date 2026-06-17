@@ -64,20 +64,7 @@ int SocketCANDriver::recv_data(ExtH9Frame& frame) {
         throw std::system_error(errno, std::system_category(), std::to_string(errno) + __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
 
-    h9frame_t h9frame = {};
-
-    h9frame.type = (uint8_t)((can_msg.can_id >> (H9FRAME_ID_BIT_LENGTH + H9FRAME_FLAGS_BITS_LENGTH + H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1));
-    h9frame.source_id = static_cast<std::uint8_t>((can_msg.can_id >> (H9FRAME_FLAGS_BITS_LENGTH + H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_ID_BIT_LENGTH) - 1));
-    h9frame.unicast.flags = (uint8_t)((can_msg.can_id >> (H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1));
-    h9frame.unicast.destination_id = static_cast<std::uint8_t>((can_msg.can_id >> H9FRAME_SEQNUM_BIT_LENGTH) & ((1 << H9FRAME_ID_BIT_LENGTH) - 1));
-    h9frame.unicast.seqnum = static_cast<std::uint8_t>((can_msg.can_id >> 0) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1));
-
-    h9frame.dlc = can_msg.can_dlc;
-    for (int i = 0; i < 8; i++) {
-        h9frame.data[i] = can_msg.data[i];
-    }
-
-    frame = ExtH9Frame(h9frame, "");
+    frame.deserialize(name, can_msg.can_id, can_msg.can_dlc, can_msg.data);
 
     return nbyte != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
@@ -86,19 +73,10 @@ int SocketCANDriver::send_data(ExtH9Frame& frame) {
     struct can_frame can_msg;
     memset(&can_msg, 0, sizeof(struct can_frame));
 
-    can_msg.can_id |= ExtH9Frame::to_underlying(frame.type()) & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_ID_BIT_LENGTH;
-    can_msg.can_id |= frame.source_id() & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_FLAGS_BITS_LENGTH;
-    can_msg.can_id |= frame.flags() & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_ID_BIT_LENGTH;
-    can_msg.can_id |= frame.destination_id() & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_SEQNUM_BIT_LENGTH;
-    can_msg.can_id |= frame.seqnum() & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
-
+    can_msg.can_id = frame.can_id();
     can_msg.can_id |= CAN_EFF_FLAG;
-
     can_msg.can_dlc = frame.dlc();
+
     for (int i = 0; i < 8; i++) {
         can_msg.data[i] = frame.data()[i];
     }

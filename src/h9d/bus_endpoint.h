@@ -42,5 +42,5 @@ class BusEndpoint {
     void close();
 
     int send_frame(std::shared_ptr<BusFrame> busframe);
-    int recv_frame(BusFrame* busframe);
+    int recv_frame(BusFrame** busframe);
 };

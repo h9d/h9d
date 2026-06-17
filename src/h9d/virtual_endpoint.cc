@@ -20,12 +20,14 @@ void VirtualEndpoint::virtual_endpoint_thread() {
     create_node();
 
     while (virtual_endpoint_thread_run) {
-        h9frame_t frame = {};
-        ssize_t ret = recv(_socket, &frame, sizeof(h9frame_t), 0);
+        std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
+
+        ssize_t ret = recv(_socket, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0);
         if (ret == -1) {
             throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
         }
-
+        ExtH9Frame frame;
+        frame.deserialize("VirtualEndpoint", buf);
         node->on_frame(frame);
     }
 
@@ -101,8 +103,8 @@ void VirtualEndpoint::activate() {
     });
 }
 
-void VirtualEndpoint::send_frame(const h9frame_t& frame) {
-    ssize_t ret = send(_socket, &frame, sizeof(h9frame_t), 0);
+void VirtualEndpoint::send_frame(const ExtH9Frame& frame) {
+    ssize_t ret = send(_socket, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }

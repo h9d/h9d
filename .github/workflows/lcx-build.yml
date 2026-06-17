@@ -28,7 +28,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake --build build -j
+          cmake --build build
 
       - name: Install
         run: |

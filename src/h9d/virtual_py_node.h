@@ -30,7 +30,7 @@ class VirtualPyNode {
     int new_node_id;
 
     void send_turned_on_broadcast();
-    void call_py_on_frame(const h9frame_t& frame);
+    void call_py_on_frame(const ExtH9Frame& frame);
     void reset();
 
   public:
@@ -38,10 +38,10 @@ class VirtualPyNode {
     constexpr static std::uint16_t VERSION_MINOR = 0;
     constexpr static std::uint16_t VERSION_PATCH = 0;
 
-    static bool send_frame(const h9frame_t& frame);
+    static bool send_frame(const ExtH9Frame& frame);
 
     VirtualPyNode(std::uint16_t node_id, std::uint16_t node_type, const std::string& py_path, const std::string& py_module, VirtualEndpoint* vendpoint);
     ~VirtualPyNode();
 
-    void on_frame(const h9frame_t& frame);
+    void on_frame(const ExtH9Frame& frame);
 };

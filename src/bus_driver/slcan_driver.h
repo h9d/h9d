@@ -27,7 +27,7 @@ class SlcanDriver: public BusDriver {
     bool noblock;
     std::string recv_buf;
 
-    std::queue<h9frame_t> recv_queue;
+    std::queue<ExtH9Frame> recv_queue;
 
     int pending_send_count;
 
@@ -35,8 +35,8 @@ class SlcanDriver: public BusDriver {
     SlcanDriver(const std::string& name, const std::string& tty, const std::string& init_string);
     int open() override;
 
-    static std::string build_slcan_msg(const h9frame_t& frame);
-    static bool parse_slcan_msg(const std::string& slcan_data, h9frame_t* frame);
+    static std::string build_slcan_msg(const ExtH9Frame& frame);
+    static bool parse_slcan_msg(const std::string& slcan_data, ExtH9Frame* frame);
 
   private:
     int recv_data(ExtH9Frame& frame) override;

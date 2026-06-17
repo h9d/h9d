@@ -82,7 +82,7 @@ class Node: protected RawNode {
     [[nodiscard]] std::string node_description() const noexcept;
 
     void node_reset();
-    void node_discovery(std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision);
+    //void node_discovery(std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision);
 
     regvalue_t set_register(std::uint8_t reg, regvalue_t value);
     regvalue_t get_register(std::uint8_t reg);

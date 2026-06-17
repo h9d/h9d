@@ -27,35 +27,35 @@ static int H9Frame_init(PyH9frame* self, PyObject* args, PyObject* kwds) {
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|BBHBBBO", const_cast<char**>(kwlist), &type, &source_id, &broadcast_group, &destination_id, &seqnum, &dlc, &data))
         return -1;
 
-    if (type > ExtH9Frame::H9FRAME_TYPE_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_TYPE_MAX_VALUE)).c_str());
+    if (type > ExtH9Frame::TYPE_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::TYPE_MAX_VALUE)).c_str());
         return -1;
     }
-    self->frame.type = (uint8_t)type;
+    self->frame.type(ExtH9Frame::from_underlying<ExtH9Frame::Type>(type));
 
-    if (seqnum > ExtH9Frame::H9FRAME_SEQNUM_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_SEQNUM_MAX_VALUE)).c_str());
+    if (seqnum > ExtH9Frame::SEQNUM_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::SEQNUM_MAX_VALUE)).c_str());
         return -1;
     }
-    self->frame.unicast.seqnum = seqnum;
+    self->frame.seqnum(seqnum);
 
-    if (destination_id > ExtH9Frame::H9FRAME_DESTINATION_ID_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_DESTINATION_ID_MAX_VALUE)).c_str());
+    if (destination_id > ExtH9Frame::ID_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::ID_MAX_VALUE)).c_str());
         return -1;
     }
-    self->frame.unicast.destination_id = destination_id;
+    self->frame.destination_id(destination_id);
 
-    if (source_id > ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE)).c_str());
+    if (source_id > ExtH9Frame::ID_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::ID_MAX_VALUE)).c_str());
         return -1;
     }
-    self->frame.source_id = source_id;
+    self->frame.source_id(source_id);
 
     if (dlc > 8) {
         PyErr_SetString(PyExc_OverflowError, "maximum allowed value is 8");
         return -1;
     }
-    self->frame.dlc = dlc;
+    self->frame.dlc(dlc);
 
     if (data) {
         if (!PySequence_Check(data)) {
@@ -64,7 +64,7 @@ static int H9Frame_init(PyH9frame* self, PyObject* args, PyObject* kwds) {
         }
 
         int len = PySequence_Size(data);
-        if (len > ExtH9Frame::H9FRAME_DATA_LENGTH) {
+        if (len > ExtH9Frame::MAX_DATA_LENGTH) {
             PyErr_SetString(PyExc_OverflowError, "The length of the 'date' attribute must be less or equal than 8.");
             return -1;
         }
@@ -72,25 +72,25 @@ static int H9Frame_init(PyH9frame* self, PyObject* args, PyObject* kwds) {
             PyObject* item = PySequence_GetItem(data, i);
             unsigned int tmp = PyLong_AsUnsignedLong(item);
             if (PyErr_Occurred()) {
-                self->frame.dlc = 0;
+                self->frame.dlc(0);
                 return -1;
             }
             if (tmp > 255) {
                 PyErr_SetString(PyExc_OverflowError, "maximum allowed value is 255");
-                self->frame.dlc = 0;
+                self->frame.dlc(0);
                 return -1;
             }
-            self->frame.data[i] = tmp;
+            self->frame.data_raw()[i] = tmp;
         }
 
-        self->frame.dlc = len;
+        self->frame.dlc(len);
     }
 
     return 0;
 }
 
 static PyObject* H9Frame_get_type(PyH9frame* self, void* closure) {
-    return PyLong_FromUnsignedLong(self->frame.type);
+    return PyLong_FromUnsignedLong(ExtH9Frame::to_underlying(self->frame.type()));
 }
 
 static int H9Frame_set_type(PyH9frame* self, PyObject* value, void* closure) {
@@ -103,17 +103,17 @@ static int H9Frame_set_type(PyH9frame* self, PyObject* value, void* closure) {
     if (PyErr_Occurred()) {
         return -1;
     }
-    if (tmp > ExtH9Frame::H9FRAME_TYPE_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_TYPE_MAX_VALUE)).c_str());
+    if (tmp > ExtH9Frame::TYPE_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::TYPE_MAX_VALUE)).c_str());
         return -1;
     }
 
-    self->frame.type = (uint8_t)tmp;
+    self->frame.type(ExtH9Frame::from_underlying<ExtH9Frame::Type>(tmp));
     return 0;
 }
 
 static PyObject* H9Frame_get_seqnum(PyH9frame* self, void* closure) {
-    return PyLong_FromUnsignedLong(self->frame.unicast.seqnum);
+    return PyLong_FromUnsignedLong(self->frame.seqnum());
 }
 
 static int H9Frame_set_seqnum(PyH9frame* self, PyObject* value, void* closure) {
@@ -126,17 +126,17 @@ static int H9Frame_set_seqnum(PyH9frame* self, PyObject* value, void* closure) {
     if (PyErr_Occurred()) {
         return -1;
     }
-    if (tmp > ExtH9Frame::H9FRAME_SEQNUM_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_SEQNUM_MAX_VALUE)).c_str());
+    if (tmp > ExtH9Frame::SEQNUM_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::SEQNUM_MAX_VALUE)).c_str());
         return -1;
     }
 
-    self->frame.unicast.seqnum = tmp;
+    self->frame.seqnum(tmp);
     return 0;
 }
 
 static PyObject* H9Frame_get_destination_id(PyH9frame* self, void* closure) {
-    return PyLong_FromUnsignedLong(self->frame.unicast.destination_id);
+    return PyLong_FromUnsignedLong(self->frame.destination_id());
 }
 
 static int H9Frame_set_destination_id(PyH9frame* self, PyObject* value, void* closure) {
@@ -149,17 +149,17 @@ static int H9Frame_set_destination_id(PyH9frame* self, PyObject* value, void* cl
     if (PyErr_Occurred()) {
         return -1;
     }
-    if (tmp > ExtH9Frame::H9FRAME_DESTINATION_ID_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_DESTINATION_ID_MAX_VALUE)).c_str());
+    if (tmp > ExtH9Frame::ID_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::ID_MAX_VALUE)).c_str());
         return -1;
     }
 
-    self->frame.unicast.destination_id = tmp;
+    self->frame.destination_id(tmp);
     return 0;
 }
 
 static PyObject* H9Frame_get_source_id(PyH9frame* self, void* closure) {
-    return PyLong_FromUnsignedLong(self->frame.source_id);
+    return PyLong_FromUnsignedLong(self->frame.source_id());
 }
 
 static int H9Frame_set_source_id(PyH9frame* self, PyObject* value, void* closure) {
@@ -177,17 +177,17 @@ static int H9Frame_set_source_id(PyH9frame* self, PyObject* value, void* closure
     if (PyErr_Occurred()) {
         return -1;
     }
-    if (tmp > ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE) {
-        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE)).c_str());
+    if (tmp > ExtH9Frame::ID_MAX_VALUE) {
+        PyErr_SetString(PyExc_OverflowError, ("maximum allowed value is " + std::to_string(ExtH9Frame::ID_MAX_VALUE)).c_str());
         return -1;
     }
 
-    self->frame.source_id = tmp;
+    self->frame.source_id(tmp);
     return 0;
 }
 
 static PyObject* H9Frame_get_dlc(PyH9frame* self, void* closure) {
-    return PyLong_FromUnsignedLong(self->frame.dlc);
+    return PyLong_FromUnsignedLong(self->frame.dlc());
 }
 
 static int H9Frame_set_dlc(PyH9frame* self, PyObject* value, void* closure) {
@@ -204,15 +204,15 @@ static int H9Frame_set_dlc(PyH9frame* self, PyObject* value, void* closure) {
         PyErr_SetString(PyExc_OverflowError, "maximum allowed value is 8");
         return -1;
     }
-    self->frame.dlc = tmp;
+    self->frame.dlc(tmp);
 
     return 0;
 }
 
 static PyObject* H9Frame_get_data(PyH9frame* self, void* closure) {
-    PyObject* data = PyTuple_New(self->frame.dlc);
-    for (int i = 0; i < self->frame.dlc; ++i) {
-        PyObject* tmp = PyLong_FromLong(self->frame.data[i]);
+    PyObject* data = PyTuple_New(self->frame.dlc());
+    for (int i = 0; i < self->frame.dlc(); ++i) {
+        PyObject* tmp = PyLong_FromLong(self->frame.data()[i]);
         PyTuple_SetItem(data, i, tmp);
     }
     return data;
@@ -230,7 +230,7 @@ static int H9Frame_set_data(PyH9frame* self, PyObject* value, void* closure) {
     }
 
     int len = PySequence_Size(value);
-    if (len > ExtH9Frame::H9FRAME_DATA_LENGTH) {
+    if (len > ExtH9Frame::MAX_DATA_LENGTH) {
         PyErr_SetString(PyExc_OverflowError, "The length of the 'date' attribute must be less or equal than 8.");
         return -1;
     }
@@ -238,18 +238,18 @@ static int H9Frame_set_data(PyH9frame* self, PyObject* value, void* closure) {
         PyObject* item = PySequence_GetItem(value, i);
         unsigned int tmp = PyLong_AsUnsignedLong(item);
         if (PyErr_Occurred()) {
-            self->frame.dlc = 0;
+            self->frame.dlc(0);
             return -1;
         }
         if (tmp > 255) {
             PyErr_SetString(PyExc_OverflowError, "maximum allowed value is 255");
-            self->frame.dlc = 0;
+            self->frame.dlc(0);
             return -1;
         }
-        self->frame.data[i] = tmp;
+        self->frame.data_raw()[i] = tmp;
     }
 
-    self->frame.dlc = len;
+    self->frame.dlc(len);
     return 0;
 }
 
@@ -337,7 +337,7 @@ PyMODINIT_FUNC PyInit_h9(void) {
         return NULL;
     }
 
-    for (std::underlying_type_t<ExtH9Frame::Error> i = 0; i <= ExtH9Frame::H9FRAME_TYPE_MAX_VALUE; ++i) {
+    for (std::underlying_type_t<ExtH9Frame::Error> i = 0; i <= ExtH9Frame::TYPE_MAX_VALUE; ++i) {
         const char* tmp = ExtH9Frame::error_to_string(ExtH9Frame::from_underlying<ExtH9Frame::Error>(i));
         if (tmp) {
             std::string name = "ERROR_" + std::string(tmp);
@@ -345,7 +345,7 @@ PyMODINIT_FUNC PyInit_h9(void) {
         }
     }
 
-    for (std::underlying_type_t<ExtH9Frame::Type> i = 0; i <= ExtH9Frame::H9FRAME_TYPE_MAX_VALUE; ++i) {
+    for (std::underlying_type_t<ExtH9Frame::Type> i = 0; i <= ExtH9Frame::TYPE_MAX_VALUE; ++i) {
         const char* tmp = ExtH9Frame::type_to_string(ExtH9Frame::from_underlying<ExtH9Frame::Type>(i));
         if (tmp) {
             std::string name = "TYPE_" + std::string(tmp);
@@ -356,7 +356,7 @@ PyMODINIT_FUNC PyInit_h9(void) {
     return m;
 }
 
-PyObject* PyH9Frame_New(const h9frame_t& frame) {
+PyObject* PyH9Frame_New(const ExtH9Frame& frame) {
     PyH9frame* t = PyObject_NEW(PyH9frame, &h9frameType);
     t->frame = frame;
     return reinterpret_cast<PyObject*>(t);

@@ -41,7 +41,7 @@ class NodeMgr: public FrameObserver {
     virtual void on_frame_send(const ExtH9Frame& frame) noexcept {};
 
     std::shared_mutex nodes_map_mtx;
-    Node* nodes[ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE + 1];
+    Node* nodes[ExtH9Frame::ID_MAX_VALUE + 1];
 
     std::shared_mutex devs_map_mtx;
     std::map<std::string, Dev*> devs_map;

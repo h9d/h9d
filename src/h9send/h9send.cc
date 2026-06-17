@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
                 SPDLOG_ERROR("Can not send message: {}.", e.what());
                 exit(EXIT_FAILURE);
             }
-            frame.seqnum(ExtH9Frame::H9FRAME_SEQNUM_MAX_VALUE + 1); //unvalid seqnum
+            frame.seqnum(ExtH9Frame::SEQNUM_MAX_VALUE + 1); //unvalid seqnum
             sleep(sleep_time);
         }
     }

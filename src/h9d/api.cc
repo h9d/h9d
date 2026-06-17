@@ -99,16 +99,16 @@ nlohmann::json API::send_frame(TCPClientThread* client_thread, const jsonrpcpp::
         }
         ExtH9Frame frame = params.param_map.at("frame").get<ExtH9Frame>(); // nie zlapiemy wyjatkow! gdzies po drodze jest noexcept
 
-        if (raw && frame.invalid_member() & ~ExtH9Frame::VALID_ORIGIN) {
+        if (raw && !frame.is_valid()) {
             SPDLOG_ERROR("Incorrect raw frame during invoke 'send_frame' by {}", __FUNCTION__, client_thread->get_client_idstring());
             SPDLOG_DEBUG("Raw 'send_frame' dump frame params: {}.", __FUNCTION__, params.param_map.at("frame").dump());
             throw jsonrpcpp::InvalidParamsException("Incorrect raw frame during invoke 'send_frame'", id);
         }
-        else if (frame.invalid_member() & ~(ExtH9Frame::VALID_ORIGIN | ExtH9Frame::VALID_SEQNUM | ExtH9Frame::VALID_SOURCE_ID)) {
-            SPDLOG_ERROR("Incorrect frame invoke 'send_frame' by {}", __FUNCTION__, client_thread->get_client_idstring());
-            SPDLOG_DEBUG("'send_frame' dump frame params: {}.", __FUNCTION__, params.param_map.at("frame").dump());
-            throw jsonrpcpp::InvalidParamsException("Incorrect frame during invoke 'send_frame'", id);
-        }
+        // else if (frame.invalid_member() & ~(ExtH9Frame::VALID_ORIGIN | ExtH9Frame::VALID_SEQNUM | ExtH9Frame::VALID_SOURCE_ID)) {
+        //     SPDLOG_ERROR("Incorrect frame invoke 'send_frame' by {}", __FUNCTION__, client_thread->get_client_idstring());
+        //     SPDLOG_DEBUG("'send_frame' dump frame params: {}.", __FUNCTION__, params.param_map.at("frame").dump());
+        //     throw jsonrpcpp::InvalidParamsException("Incorrect frame during invoke 'send_frame'", id);
+        // }
 
         frame.origin(client_thread->get_client_idstring());
         int ret = bus->send_frame(std::move(frame), raw);

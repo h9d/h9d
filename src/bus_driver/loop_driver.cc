@@ -40,20 +40,21 @@ int LoopDriver::recv_data(ExtH9Frame& frame) {
     socklen_t len = sizeof(tmp_addr);
     bcopy(&loopback_addr, &tmp_addr, len);
 
-    h9frame_t h9frame = {};
-    int ret = recvfrom(socket_fd, &h9frame, sizeof(h9frame_t), 0, (struct sockaddr*)&tmp_addr, &len);
+    std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
+
+    int ret = recvfrom(socket_fd, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0, (struct sockaddr*)&tmp_addr, &len);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
 
     if (ret != 0)
-        frame = ExtH9Frame(h9frame, "");
+        frame.deserialize(name, buf);
 
     return ret != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
 int LoopDriver::send_data(ExtH9Frame& frame) {
-    int ret = sendto(socket_fd, &frame.frame(), sizeof(h9frame_t), 0, (const struct sockaddr*)&loopback_addr, sizeof(loopback_addr));
+    int ret = sendto(socket_fd, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0, (const struct sockaddr*)&loopback_addr, sizeof(loopback_addr));
 
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));

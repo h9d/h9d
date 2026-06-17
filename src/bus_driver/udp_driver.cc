@@ -19,13 +19,6 @@
 #include <unistd.h>
 #include <utility>
 
-struct can_frame {
-    std::uint32_t can_id;
-    std::uint8_t can_dlc;
-    std::uint8_t data[8];
-
-};
-
 UDPDriver::UDPDriver(const std::string& name, std::string local_port, std::string remote_addr, std::string remote_port):
     BusDriver(name, "udp"),
     remote(nullptr),
@@ -90,57 +83,21 @@ int UDPDriver::recv_data(ExtH9Frame& frame) {
     sockaddr_storage remote_addr;
     socklen_t len = sizeof(remote_addr);
 
-    can_frame can_msg;
+    std::uint8_t buf[ExtH9Frame::SERIALIZATION_LENGTH];
 
-    ssize_t ret = recvfrom(socket_fd, &can_msg, sizeof(can_msg), 0, (struct sockaddr*)&remote_addr, &len);
+    ssize_t ret = recvfrom(socket_fd, buf, ExtH9Frame::SERIALIZATION_LENGTH, 0, (struct sockaddr*)&remote_addr, &len);
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
 
-    can_msg.can_id = ntohl(can_msg.can_id);
-
-    h9frame_t h9frame = {};
-
-    h9frame.type = (uint8_t)((can_msg.can_id >> (H9FRAME_ID_BIT_LENGTH + H9FRAME_FLAGS_BITS_LENGTH + H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1));
-    h9frame.source_id = static_cast<std::uint8_t>((can_msg.can_id >> (H9FRAME_FLAGS_BITS_LENGTH + H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_ID_BIT_LENGTH) - 1));
-    h9frame.unicast.flags = (uint8_t)((can_msg.can_id >> (H9FRAME_ID_BIT_LENGTH + H9FRAME_SEQNUM_BIT_LENGTH)) & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1));
-    h9frame.unicast.destination_id = static_cast<std::uint8_t>((can_msg.can_id >> H9FRAME_SEQNUM_BIT_LENGTH) & ((1 << H9FRAME_ID_BIT_LENGTH) - 1));
-    h9frame.unicast.seqnum = static_cast<std::uint8_t>((can_msg.can_id >> 0) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1));
-
-    h9frame.dlc = can_msg.can_dlc;
-    for (int i = 0; i < 8; i++) {
-        h9frame.data[i] = can_msg.data[i];
-    }
-
     if (ret != 0)
-        frame = ExtH9Frame(h9frame, "");
+        frame.deserialize(name, buf);
 
     return ret != 0 ? RECV_FRAME : SOCKET_CLOSE;
 }
 
 int UDPDriver::send_data(ExtH9Frame& frame) {
-    can_frame can_msg;
-    memset(&can_msg, 0, sizeof(struct can_frame));
-
-
-    can_msg.can_id |= ExtH9Frame::to_underlying(frame.type()) & ((1 << H9FRAME_TYPE_BIT_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_ID_BIT_LENGTH;
-    can_msg.can_id |= frame.source_id() & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_FLAGS_BITS_LENGTH;
-    can_msg.can_id |= frame.flags() & ((1 << H9FRAME_FLAGS_BITS_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_ID_BIT_LENGTH;
-    can_msg.can_id |= frame.destination_id() & ((1 << H9FRAME_ID_BIT_LENGTH) - 1);
-    can_msg.can_id <<= H9FRAME_SEQNUM_BIT_LENGTH;
-    can_msg.can_id |= frame.seqnum() & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
-
-    can_msg.can_id = htonl(can_msg.can_id);
-
-    can_msg.can_dlc = frame.dlc();
-    for (int i = 0; i < 8; i++) {
-        can_msg.data[i] = frame.data()[i];
-    }
-
-    ssize_t ret = sendto(socket_fd, &can_msg, sizeof(can_msg), 0, remote->ai_addr, remote->ai_addrlen);
+    ssize_t ret = sendto(socket_fd, frame.serialize().data(), ExtH9Frame::SERIALIZATION_LENGTH, 0, remote->ai_addr, remote->ai_addrlen);
 
     if (ret == -1) {
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));

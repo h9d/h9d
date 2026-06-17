@@ -92,7 +92,7 @@ class RawNode {
     NodeMgr* const node_mgr;
 
     const std::uint16_t _node_id;
-    RawNode(NodeMgr* node_mgr, Bus* bus, std::uint16_t node_id) noexcept;
+    RawNode(NodeMgr* node_mgr, Bus* bus, std::uint8_t node_id) noexcept;
 
     friend NodeMgr;
 
@@ -107,7 +107,7 @@ class RawNode {
     std::uint16_t node_id() const noexcept;
 
     ssize_t reset(const std::string& origin);
-    ssize_t discovery(const std::string& origin, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision);
+    //ssize_t discovery(const std::string& origin, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision);
 
     int32_t get_node_type(const std::string& origin) noexcept;
     int64_t get_node_version(const std::string& origin, std::uint16_t* major = nullptr, std::uint16_t* minor = nullptr, std::uint16_t* patch = nullptr) noexcept;

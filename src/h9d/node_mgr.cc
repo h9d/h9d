@@ -74,8 +74,9 @@ void NodeMgr::nodes_dev_update_thread() {
             init_node(frame.source_id(), node_type, version, hardware_revision, reset_reason);
         }
         else if (! nodes[frame.source_id()]->is_init()) {
-            ExtH9Frame req_frame("h9d", ExtH9Frame::Type::DISCOVER, frame.source_id(), 0, {});
-            bus->send_frame_noblock(req_frame);
+            //TODO: dodac pobieranie informacji o wykrytych nodach
+            // ExtH9Frame req_frame("h9d", ExtH9Frame::Type::DISCOVER, frame.source_id(), {});
+            // bus->send_frame_noblock(req_frame);
         }
 
         update_node_last_seen_time(frame.source_id(), frame.creation_timestamp());
@@ -113,7 +114,7 @@ NodeMgr::NodeMgr(Bus* bus):
     bus(bus) {
     logger = spdlog::get(H9dConfigurator::nodes_logger_name);
 
-    for (int id = 0; id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE; ++id) {
+    for (int id = 0; id <= ExtH9Frame::ID_MAX_VALUE; ++id) {
         nodes[id] = nullptr;
     }
 
@@ -128,7 +129,7 @@ NodeMgr::~NodeMgr() {
     if (nodes_update_thread_desc.joinable())
         nodes_update_thread_desc.join();
 
-    for (int id = 0; id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE; ++id) {
+    for (int id = 0; id <= ExtH9Frame::ID_MAX_VALUE; ++id) {
         delete nodes[id];
         nodes[id] = nullptr;
     }
@@ -143,7 +144,7 @@ void NodeMgr::reload_nodes_description() {
     SPDLOG_LOGGER_INFO(logger, "Reload nodes description file.");
     Node::nodedescloader.reload();
 
-    for (int id = 0; id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE; ++id) {
+    for (int id = 0; id <= ExtH9Frame::ID_MAX_VALUE; ++id) {
         if (nodes[id] != NULL && nodes[id]->is_init()) {
             nodes[id]->load_description();
         }
@@ -169,14 +170,14 @@ int NodeMgr::response_timeout_duration() const {
 }
 
 int NodeMgr::discover() {
-    ExtH9Frame frame("h9d", ExtH9Frame::Type::DISCOVER, ExtH9Frame::BROADCAST_ID, 0, {});
+    ExtH9Frame frame("h9d", ExtH9Frame::Type::DISCOVER, ExtH9Frame::BROADCAST_ID);
 
     return bus->send_frame(frame);
 }
 
 int NodeMgr::active_devices_count() noexcept {
     int ret = 0;
-    for (int id = 0; id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE; ++id) {
+    for (int id = 0; id <= ExtH9Frame::ID_MAX_VALUE; ++id) {
         if (nodes[id])
             ++ret;
     }
@@ -194,7 +195,7 @@ bool NodeMgr::is_node_init(std::uint16_t node_id) noexcept {
 std::vector<NodeMgr::NodeDsc> NodeMgr::get_nodes_list() noexcept {
     std::vector<NodeMgr::NodeDsc> ret;
 
-    for (std::uint16_t id = 0; id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE; ++id) {
+    for (std::uint16_t id = 0; id <= ExtH9Frame::ID_MAX_VALUE; ++id) {
         if (nodes[id] && nodes[id]->is_init())
             ret.push_back({id, nodes[id]->node_type(), nodes[id]->node_version_major(), nodes[id]->node_version_minor(), nodes[id]->node_hardware_revision(), nodes[id]->node_reset_reason(), nodes[id]->node_name()});
         ;
@@ -238,12 +239,12 @@ void NodeMgr::node_reset(std::uint16_t node_id) {
     throw NodeNotExistException();
 }
 
-void NodeMgr::node_discovery(std::uint16_t node_id, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision) {
-    if (nodes[node_id]) {
-        nodes[node_id]->discovery("h9d", type, version_major, version_minor, hardware_revision);
-    }
-    throw NodeNotExistException();
-}
+// void NodeMgr::node_discovery(std::uint16_t node_id, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision) {
+//     if (nodes[node_id]) {
+//         nodes[node_id]->discovery("h9d", type, version_major, version_minor, hardware_revision);
+//     }
+//     throw NodeNotExistException();
+// }
 
 Node::regvalue_t NodeMgr::set_register(std::uint16_t node_id, std::uint8_t reg, Node::regvalue_t value) {
     if (nodes[node_id]) {
@@ -384,7 +385,7 @@ void NodeMgr::add_dev(Dev* dev) {
         devs_map_mtx.unlock();
 
         for (auto node : dev->get_nodes_id()) {
-            if (node <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE) {
+            if (node <= ExtH9Frame::ID_MAX_VALUE) {
                 if (nodes[node] == nullptr) {
                     nodes[node] = create_node(node);
                 }
@@ -409,7 +410,7 @@ void NodeMgr::del_dev(const std::string& dev_id) {
         Dev *dev = devs_map[dev_id];
 
         for (auto node: dev->get_nodes_id()) {
-            if (node <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE) {
+            if (node <= ExtH9Frame::ID_MAX_VALUE) {
                 nodes[node]->del_dependent_devices(dev);
             }
         }

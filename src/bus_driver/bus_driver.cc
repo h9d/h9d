@@ -50,10 +50,10 @@ int BusDriver::send_frame(ExtH9Frame& frame) {
         frame.type() == ExtH9Frame::Type::NODE_UPGRADE ||
         frame.type() == ExtH9Frame::Type::NODE_RESET) {
 
-        if (frame.invalid_member() & ExtH9Frame::VALID_SEQNUM) {
+        //if (frame.invalid_member() & ExtH9Frame::VALID_SEQNUM) {
             frame.seqnum(next_seqnum);
             next_seqnum = (next_seqnum + 1) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
-        }
+        //}
     }
     return send_data(frame);
 }

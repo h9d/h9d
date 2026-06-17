@@ -8,25 +8,25 @@
 
 #include "busframe.h"
 
-BusFrame::BusFrame(): _local_frame(false) {
-    _number_of_active_bus = 0;
-    _send_counter = 0;
-    _send_fail_counter = 0;
-    _activate_promise = false;
-}
+// BusFrame:: BusFrame(): _local_frame(false) {
+//     _number_of_active_bus = 0;
+//     _send_counter = 0;
+//     _send_fail_counter = 0;
+//     _activate_promise = false;
+// }
 
-BusFrame::BusFrame(const h9frame_t& frame, const std::string& origin, std::uint64_t orgin_client_id, std::uint64_t orgin_msg_id):
-    _local_frame(false),
-    ExtH9Frame(frame, origin),
-    orgin_client_id(orgin_client_id),
-    orgin_msg_id(orgin_msg_id) {
-    _number_of_active_bus = 0;
-    _send_counter = 0;
-    _send_fail_counter = 0;
-    _activate_promise = false;
-
-    //SPDLOG_TRACE("BusFrame id: {}; origin: {}", fmt::ptr(this), this->origin());
-}
+// BusFrame::BusFrame(const h9frame_t& frame, const std::string& origin, std::uint64_t orgin_client_id, std::uint64_t orgin_msg_id):
+//     _local_frame(false),
+//     ExtH9Frame(frame, origin),
+//     orgin_client_id(orgin_client_id),
+//     orgin_msg_id(orgin_msg_id) {
+//     _number_of_active_bus = 0;
+//     _send_counter = 0;
+//     _send_fail_counter = 0;
+//     _activate_promise = false;
+//
+//     //SPDLOG_TRACE("BusFrame id: {}; origin: {}", fmt::ptr(this), this->origin());
+// }
 
 BusFrame::BusFrame(ExtH9Frame&& a, bool raw) noexcept:
     _local_frame(false),

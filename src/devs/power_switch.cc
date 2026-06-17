@@ -22,7 +22,7 @@ void PowerSwitch::periodic_task() {
 }
 
 bool PowerSwitch::is_init() {
-    return switch_id <= ExtH9Frame::H9FRAME_SOURCE_ID_MAX_VALUE;
+    return switch_id <= ExtH9Frame::ID_MAX_VALUE;
 }
 
 void PowerSwitch::init() {
@@ -33,7 +33,7 @@ void PowerSwitch::init() {
         char hardware_revision;
 
         try {
-            node_mgr->node_discovery(node, node_type, version_major, version_minor, hardware_revision);
+            //node_mgr->node_discovery(node, node_type, version_major, version_minor, hardware_revision);
         }
         catch (...) {
             continue;

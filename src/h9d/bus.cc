@@ -33,7 +33,7 @@ bool Bus::recv_thread_send() {
         bus_frame->source_id(_bus_id);
         bus_frame->seqnum(next_seqnum);
         ++next_seqnum;
-        if (next_seqnum > ExtH9Frame::H9FRAME_SEQNUM_MAX_VALUE) {
+        if (next_seqnum > ExtH9Frame::SEQNUM_MAX_VALUE) {
             next_seqnum = 0;
         }
     }
@@ -119,23 +119,26 @@ void Bus::recv_thread() {
                     try {
                         int ret;
                         do {
-                            BusFrame frame;
+                            BusFrame* frame = nullptr;
                             ret = bus_driver->recv_frame(&frame);
                             if (ret >= BusDriver::RECV_FRAME) {
                                 ++received_frames_counter;
-                                ++(*received_frames_counter_by_type[ExtH9Frame::to_underlying(frame.type())]);
+                                ++(*received_frames_counter_by_type[ExtH9Frame::to_underlying(frame->type())]);
 
-                                SPDLOG_LOGGER_DEBUG(frames_logger, "Recv frame {}.", frame);
+                                SPDLOG_LOGGER_DEBUG(frames_logger, "Recv frame {}.", *frame);
                                 frames_recv_file_logger->info(SimpleJSONBusFrameWraper(frame));
 
-                                notify_frame_recv_observer(frame);
+                                notify_frame_recv_observer(*frame);
 
                                 if (_forwarding) {
                                     bool queue_empty = forward_queue.empty();
-                                    forward_queue.push(std::make_shared<BusFrame>(std::move(frame)));
+                                    forward_queue.push(std::shared_ptr<BusFrame>(frame));
                                     if (queue_empty) {
                                         event_notificator.trigger_async_event();
                                     }
+                                }
+                                else {
+                                    delete frame;
                                 }
                             }
                         } while (ret - 1 >= BusDriver::RECV_FRAME);
