@@ -119,7 +119,7 @@ std::array<uint8_t, H9Frame::SERIALIZATION_LENGTH> H9Frame::serialize() const {
     return std::move(ret);
 }
 
-void H9Frame::deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc, const std::vector<std::uint8_t>& data) {
+void H9Frame::deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc, std::uint8_t data[MAX_DATA_LENGTH]) {
     _origin = origin;
 
     this->can_id(can_id);
@@ -194,6 +194,7 @@ void H9Frame::data(const std::vector<std::uint8_t>& data) {
     for (auto& d : data) {
         _data[i] = d;
         ++i;
+        if (i >= 8) break;
     }
 
     _dlc = i;

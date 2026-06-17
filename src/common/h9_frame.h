@@ -131,7 +131,7 @@ class H9Frame {
     void can_id(std::uint32_t can_id);
 
     [[nodiscard]] std::array<uint8_t, SERIALIZATION_LENGTH> serialize() const;
-    void deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc = 0, const std::vector<std::uint8_t>& data = {});
+    void deserialize(const std::string& origin, uint32_t can_id, std::uint8_t dlc, std::uint8_t data[MAX_DATA_LENGTH]);
     void deserialize(const std::string& origin, const std::uint8_t serialized_data[SERIALIZATION_LENGTH]);
 
     [[nodiscard]] timestamp_t creation_timestamp() const { return _creation_timestamp; }
