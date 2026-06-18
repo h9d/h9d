@@ -36,6 +36,4 @@ target_include_directories(h9d PRIVATE
 target_link_libraries(h9d PRIVATE
     BusDriverLib CommonLib ${ATOMIC_LINK} nlohmann_json::nlohmann_json spdlog::spdlog Python3::Python)
 
-add_dependencies(h9d GitVersionHeader)
-
 install(TARGETS h9d RUNTIME DESTINATION bin)

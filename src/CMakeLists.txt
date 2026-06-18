@@ -33,13 +33,6 @@ add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 
 set(H9_SRC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/git_version.h
-    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/generate_git_version_header.py > ${CMAKE_CURRENT_BINARY_DIR}/git_version.h~
-    COMMAND /bin/sh -c 'diff ${CMAKE_CURRENT_BINARY_DIR}/git_version.h~ ${CMAKE_CURRENT_BINARY_DIR}/git_version.h 2> /dev/null > /dev/null || { cp ${CMAKE_CURRENT_BINARY_DIR}/git_version.h~ ${CMAKE_CURRENT_BINARY_DIR}/git_version.h\; }')
-
-add_custom_target(GitVersionHeader DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/git_version.h)
-
 add_subdirectory(common)
 add_subdirectory(bus_driver)
 add_subdirectory(client_common)

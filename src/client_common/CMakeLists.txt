@@ -4,4 +4,3 @@ add_library(ClientCommon STATIC
 
 target_include_directories(ClientCommon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ClientCommon PUBLIC CommonLib BusDriverLib)
-add_dependencies(ClientCommon GitVersionHeader)

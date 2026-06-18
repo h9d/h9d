@@ -24,7 +24,7 @@
 #include "udp_driver.h"
 #include "slcan_driver.h"
 #include "socketcan_driver.h"
-#include "git_version.h"
+#include "version.h"
 #include "libconfuse_helper.h"
 
 namespace {
@@ -575,14 +575,7 @@ void H9dConfigurator::configure_tcpserver(TCPServer* server) {
 }
 
 std::string H9dConfigurator::version_string() {
-    std::string ret = H9_VERSION;
-#ifdef GITVERSION_COMMIT_SHA
-    ret += "-" + std::string(GITVERSION_COMMIT_SHA);
-#ifdef GITVERSION_DIRTY
-    ret += "-dirty";
-    constexpr char workdir[] = "dirty";
-#endif
-#endif
+    std::string ret = APP_VERSION;
     return std::move(ret);
 }
 

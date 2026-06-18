@@ -46,5 +46,4 @@ __pycache__/
 
 # Project
 config_gen.h
-git_version.h
-git_version.h~
+version.h

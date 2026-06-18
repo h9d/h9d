@@ -13,7 +13,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <stdexcept>
 #include <vector>
-#include "git_version.h"
+#include "version.h"
 #include "libconfuse_helper.h"
 #include "h9d_driver.h"
 #include "loop_driver.h"
@@ -73,16 +73,8 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
         }
 
         if (result.count("version")) {
-            std::cerr << _app_name << " version " << H9_VERSION << " by crowx." << std::endl;
-#ifdef GITVERSION_COMMIT_SHA
-#ifdef GITVERSION_DIRTY
-            constexpr char workdir[] = "dirty";
-#else
-            constexpr char workdir[] = "clean";
-#endif
-            std::cerr << "H9 git commit: " << GITVERSION_COMMIT_SHA << ", working directory " << workdir << "." << std::endl;
-#endif
-            std::cerr << "Copyright (C) 2017-2023 Kamil Palkowski. All rights reserved." << std::endl;
+            std::cerr << _app_name << " version " << APP_VERSION << " by crowx." << std::endl;
+            std::cerr << "Copyright (C) 2017-2026 Kamil Palkowski. All rights reserved." << std::endl;
             exit(EXIT_SUCCESS);
         }
 
