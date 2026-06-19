@@ -117,7 +117,6 @@ class RawNode {
 
     ssize_t set_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
     ssize_t clear_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
-    ssize_t toggle_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
 
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::size_t length, const std::uint8_t* reg_val, std::uint8_t* reg_after_set = nullptr, ssize_t reg_after_set_length = -1);
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::uint8_t reg_val, std::uint8_t* reg_after_set = nullptr);

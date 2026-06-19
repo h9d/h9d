@@ -19,6 +19,9 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 #include <unistd.h>
+#include <execinfo.h>
+#include <dlfcn.h>
+#include <cxxabi.h>
 
 #include "api.h"
 #include "bus.h"
@@ -27,6 +30,49 @@
 #include "node_mgr.h"
 #include "tcpserver.h"
 #include "virtual_endpoint.h"
+
+#include <csignal>    // raise, sigemptyset, sigaction
+#include <signal.h>
+void signal_handler(int sig) {
+    void* buffer[64];
+    int nptrs = backtrace(buffer, 64);
+
+    // backtrace_symbols alokuje pamięć – nie jest async-signal-safe,
+    // ale przy crashu i tak nie wrócimy, więc jest akceptowalne
+    char** symbols = backtrace_symbols(buffer, nptrs);
+
+    spdlog::critical("=== BACKTRACE (signal {}) ===", sig);
+
+    for (int i = 0; i < nptrs; ++i) {
+        Dl_info info;
+        if (dladdr(buffer[i], &info)) {
+            // demangling nazwy funkcji
+            int status = 0;
+            char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+            const char* func_name = (status == 0 && demangled) ? demangled : (info.dli_sname ? info.dli_sname : "??");
+
+            // offset wewnątrz funkcji
+            uintptr_t offset = (uintptr_t)buffer[i] - (uintptr_t)info.dli_saddr;
+
+            spdlog::critical("  #{:02d}  {} :: {} + 0x{:x}  [{}]",
+                i,
+                info.dli_fname ? info.dli_fname : "??",  // nazwa biblioteki/pliku
+                func_name,                                 // zdemanglowana funkcja
+                offset,                                    // offset w funkcji
+                buffer[i]                                  // surowy adres
+            );
+
+            free(demangled);
+        }
+        else {
+            spdlog::critical("  #{:02d}  ?? [{:p}]", i, buffer[i]);
+        }
+    }
+
+    spdlog::default_logger()->flush();
+
+    _Exit(128 + sig);
+}
 
 int main(int argc, char** argv) {
     std::set_terminate([]() {
@@ -42,6 +88,8 @@ int main(int argc, char** argv) {
         }
         std::abort();
     });
+
+    signal(SIGABRT, signal_handler);
 
     H9dConfigurator configurator;
 

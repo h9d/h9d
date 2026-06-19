@@ -113,7 +113,6 @@ class NodeMgr: public FrameObserver {
     Node::regvalue_t get_register(std::uint16_t node_id, std::uint8_t reg);
     Node::regvalue_t set_register_bit(std::uint16_t node_id, std::uint8_t reg, std::uint8_t bit_num);
     Node::regvalue_t clear_register_bit(std::uint16_t node_id, std::uint8_t reg, std::uint8_t bit_num);
-    Node::regvalue_t toggle_register_bit(std::uint16_t node_id, std::uint8_t reg, std::uint8_t bit_num);
 
     std::uint8_t get_reg_value_from_frame(std::uint16_t node_id, const H9Frame& frame, Node::regvalue_t* value);
 

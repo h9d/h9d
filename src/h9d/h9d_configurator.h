@@ -68,7 +68,7 @@ class H9dConfigurator {
     void configure_tcpserver(TCPServer* server);
 
     static std::string version_string();
-    static std::string version();
-    static std::string version_commit_sha();
-    static bool version_dirty();
+    static unsigned int version_major();
+    static unsigned int version_minor();
+    static unsigned int version_patch();
 };

@@ -274,13 +274,6 @@ Node::regvalue_t NodeMgr::clear_register_bit(std::uint16_t node_id, std::uint8_t
     throw NodeNotExistException();
 }
 
-Node::regvalue_t NodeMgr::toggle_register_bit(std::uint16_t node_id, std::uint8_t reg, std::uint8_t bit_num) {
-    if (nodes[node_id]) {
-        return nodes[node_id]->toggle_register_bit(reg, bit_num);
-    }
-    throw NodeNotExistException();
-}
-
 std::uint8_t NodeMgr::get_reg_value_from_frame(std::uint16_t node_id, const H9Frame& frame, Node::regvalue_t* value) {
     if (nodes[node_id]) {
         return nodes[node_id]->get_reg_value_from_frame(frame, value);

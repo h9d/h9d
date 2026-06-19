@@ -14,7 +14,6 @@
 
 #pragma once
 
-#define H9_VERSION "@H9_VERSION@"
 #cmakedefine H9_DEBUG
 #ifndef NDEBUG
 #cmakedefine NDEBUG

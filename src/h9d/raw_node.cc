@@ -231,10 +231,6 @@ ssize_t RawNode::clear_bit(const std::string& origin, std::uint8_t reg, std::uin
     return bit_operation(origin, H9Frame::Type::CLEAR_BIT, reg, bit, length, reg_after_set);
 }
 
-ssize_t RawNode::toggle_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length, std::uint8_t* reg_after_set) {
-    return bit_operation(origin, H9Frame::Type::SET_BIT, reg, bit, length, reg_after_set);
-}
-
 ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, std::size_t length, const std::uint8_t* reg_val, std::uint8_t* reg_after_set, ssize_t reg_after_set_length) {
     H9FrameComparator comparator;
     comparator.set_source_id(_node_id);

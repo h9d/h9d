@@ -8,11 +8,14 @@
 
 #include "h9_configurator.h"
 
+#include <filesystem>
 #include <iostream>
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <stdexcept>
 #include <vector>
+#include <pwd.h>
+#include <unistd.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include "version.h"
 #include "libconfuse_helper.h"
 #include "h9d_driver.h"
@@ -25,13 +28,40 @@
 #endif
 
 namespace {
-void cfg_err_func(cfg_t* cfg, const char* fmt, va_list args) {
-    /*std::string fmt_str = {fmt};
-    fmt_str.erase(std::find_if(fmt_str.rbegin(), fmt_str.rend(), [](int ch) {
-        return !std::isspace(ch);
-    }).base(), fmt_str.end());*/
-    // Logger::default_log.vlog(Log::Level::INFO, __FILE__, __LINE__, fmt, args);
-}
+    void cfg_err_func(cfg_t* cfg, const char* fmt, va_list args) {
+        /*std::string fmt_str = {fmt};
+        fmt_str.erase(std::find_if(fmt_str.rbegin(), fmt_str.rend(), [](int ch) {
+            return !std::isspace(ch);
+        }).base(), fmt_str.end());*/
+        // Logger::default_log.vlog(Log::Level::INFO, __FILE__, __LINE__, fmt, args);
+    }
+
+    std::filesystem::path expand_tilde(const std::filesystem::path& p) {
+        std::string s = p.string();
+
+        if (s == "~" || s.rfind("~/", 0) == 0) {
+            const char* home = std::getenv("HOME");
+            if (!home) {
+                struct passwd* pw = getpwuid(getuid());
+                if (!pw) return p;
+                home = pw->pw_dir;
+            }
+            s.replace(0, 1, home);
+        }
+        return std::filesystem::path(s);
+    }
+
+    std::vector<std::string> split_connection_string(const std::string& s) {
+        std::vector<std::string> parts;
+        std::size_t start = 0;
+        std::size_t pos;
+        while ((pos = s.find(':', start)) != std::string::npos) {
+            parts.push_back(s.substr(start, pos - start));
+            start = pos + 1;
+        }
+        parts.push_back(s.substr(start));
+        return parts;
+    }
 } // namespace
 
 H9Configurator::H9Configurator(const std::string& app_name, const std::string& app_desc):
@@ -56,7 +86,7 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
     options.add_options("connection")
             ("c,connect", "Connection address", cxxopts::value<std::string>())
             ("p,port", "Connection port", cxxopts::value<int>()->default_value(std::to_string(default_h9d_port)))
-            ("F,config", "User config file", cxxopts::value<std::string>()->default_value(default_user_config))
+            ("F,config", "User config file", cxxopts::value<std::string>()->default_value(""))
             ;
     // clang-format on
 
@@ -117,29 +147,49 @@ void H9Configurator::load_configuration() {
     cfg_set_error_function(cfg, cfg_err_func);
     cfg_set_validate_func(cfg, "DefaultSourceID", confuse_helpers::validate_node_id);
 
-    int result = cfg_parse(cfg, config_file.c_str());
-    if (result == CFG_PARSE_ERROR) {
-        SPDLOG_WARN("Can't parse cfg file: {}.", config_file);
-        cfg_free(cfg);
-        cfg = nullptr;
-        if (config_file != default_config) {
-            config_file = default_config;
-            load_configuration();
-            return ;
+    std::error_code ec;
+    int result = CFG_SUCCESS;
+
+    spdlog::level::level_enum cfg_read_erro_level = spdlog::level::warn;
+
+    auto expand_default_user_config = expand_tilde(default_user_config);
+
+    if (!config_file.empty()) {
+        if (std::filesystem::exists(config_file, ec) && std::filesystem::is_regular_file(std::filesystem::status(config_file, ec))) {
+            cfg_read_erro_level = spdlog::level::err;
+            result = cfg_parse(cfg, config_file.c_str());
+        }
+        else {
+            SPDLOG_ERROR("Cfg file '{}' doesn't exist.", config_file);
+            cfg_free(cfg);
+            cfg = nullptr;
         }
     }
-    else if (result == CFG_FILE_ERROR) {
-        SPDLOG_WARN("Can't open cfg file: '{}'.", config_file);
-        cfg_free(cfg);
-        cfg = nullptr;
-        if (config_file != default_config) {
-            config_file = default_config;
-            load_configuration();
-            return ;
-        }
+    else if (std::filesystem::exists(expand_default_user_config, ec) && std::filesystem::is_regular_file(std::filesystem::status(expand_default_user_config, ec))) {
+        result = cfg_parse(cfg, expand_default_user_config.c_str());
+        config_file = expand_default_user_config;
+    }
+    else if (std::filesystem::exists(default_config, ec) && std::filesystem::is_regular_file(std::filesystem::status(default_config, ec))) {
+        SPDLOG_INFO("Cfg file '{}' doesn't exist.", expand_default_user_config.c_str());
+        result = cfg_parse(cfg, default_config);
+        config_file = default_config;
     }
     else {
-        SPDLOG_INFO("Loading configuration from {} file.", config_file);
+        SPDLOG_INFO("Cfg file '{}' doesn't exist.", expand_default_user_config.c_str());
+        SPDLOG_INFO("Cfg file '{}' doesn't exist.", default_config);
+        cfg_free(cfg);
+        cfg = nullptr;
+    }
+
+    if (result == CFG_PARSE_ERROR) {
+        SPDLOG_LOGGER_CALL(spdlog::default_logger_raw(), cfg_read_erro_level, "Can't parse cfg file: '{}'.", config_file);
+        cfg_free(cfg);
+        cfg = nullptr;
+    }
+    else if (result == CFG_FILE_ERROR) {
+        SPDLOG_LOGGER_CALL(spdlog::default_logger_raw(), cfg_read_erro_level, "Can't parse cfg file: '{}'.", config_file);
+        cfg_free(cfg);
+        cfg = nullptr;
     }
 
     if (host.empty()) {
@@ -147,6 +197,8 @@ void H9Configurator::load_configuration() {
     }
 
     if (cfg) {
+        SPDLOG_INFO("Loading configuration from '{}' file.", config_file);
+
         source_id = cfg_getint(cfg, "DefaultSourceID");
 
         for (int i = 0; i < cfg_size(cfg, "h9d"); i++) {
@@ -188,20 +240,6 @@ void H9Configurator::logger_setup() {
     else
         h9->set_level(static_cast<spdlog::level::level_enum>(tmp_level));
 }
-
-namespace {
-std::vector<std::string> split_connection_string(const std::string& s) {
-    std::vector<std::string> parts;
-    std::size_t start = 0;
-    std::size_t pos;
-    while ((pos = s.find(':', start)) != std::string::npos) {
-        parts.push_back(s.substr(start, pos - start));
-        start = pos + 1;
-    }
-    parts.push_back(s.substr(start));
-    return parts;
-}
-} // namespace
 
 std::unique_ptr<BusDriver> H9Configurator::get_bus_driver() {
     const std::string& conn = host;

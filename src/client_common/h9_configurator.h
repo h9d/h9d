@@ -18,7 +18,8 @@
 class H9Configurator {
   private:
     constexpr static char log_debug_pattern[] = "%^[%L %T.%e] [%s:%#]%$ %v";
-    constexpr static char log_pattern[] = "%^[%L %T.%e]%$ %v";
+    //constexpr static char log_pattern[] = "%^[%L]%$ %v";
+    constexpr static char log_pattern[] = "%v";
 
     constexpr static const char* default_config = H9_CONFIG_FILE;
     constexpr static const char* default_user_config = H9_USER_CONFIG_FILE;

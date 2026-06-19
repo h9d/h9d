@@ -497,37 +497,6 @@ Node::regvalue_t Node::clear_register_bit(std::uint8_t reg, std::uint8_t bit_num
     }
 }
 
-Node::regvalue_t Node::toggle_register_bit(std::uint8_t reg, std::uint8_t bit_num) {
-    if (register_map.count(reg)) {
-        if (register_map[reg].writable) {
-            if (register_map[reg].type != "str") {
-                size_t result_len = (register_map[reg].size + 7) / 8;
-                auto* result_buf = new std::uint8_t[result_len];
-
-                ssize_t ret;
-                if ((ret = toggle_bit("h9d", reg, bit_num, result_len, result_buf)) < 0) {
-                    delete[] result_buf;
-                    if (ret == RawNode::TIMEOUT_ERROR)
-                        throw TimeoutException();
-                    else if (ret == RawNode::MALFORMED_FRAME_ERROR)
-                        throw MalformedFrameException();
-                    else
-                        throw NodeException(-ret);
-                }
-
-                Node::regvalue_t ret_v = {std::vector<std::uint8_t>(result_buf, result_buf + ret)};
-                delete[] result_buf;
-                return std::move(ret_v);
-            }
-            throw UnsupportedRegisterDataConversionException(reg);
-        }
-        throw RegisterNotWritableException(reg);
-    }
-    else {
-        throw RegisterNotExistException(reg);
-    }
-}
-
 std::uint8_t Node::get_reg_value_from_frame(const H9Frame& frame, regvalue_t* value) {
     if (frame.type() == H9Frame::Type::REG_VALUE ||
          frame.type() == H9Frame::Type::REG_VALUE_BROADCAST) {

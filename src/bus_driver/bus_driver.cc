@@ -23,7 +23,7 @@ void BusDriver::frame_sent_incorrectly() {
 
 BusDriver::BusDriver(const std::string& name, std::string driver_name):
     name(name),
-    next_seqnum(0),
+    //next_seqnum(0),
     driver_name(std::move(driver_name)),
     socket_fd(-1) {
 
@@ -43,18 +43,18 @@ void BusDriver::close() {
 }
 
 int BusDriver::send_frame(H9Frame& frame) {
-    if (frame.type() == H9Frame::Type::SET_REG ||
-        frame.type() == H9Frame::Type::GET_REG ||
-        frame.type() == H9Frame::Type::SET_BIT ||
-        frame.type() == H9Frame::Type::CLEAR_BIT ||
-        frame.type() == H9Frame::Type::NODE_UPGRADE ||
-        frame.type() == H9Frame::Type::NODE_RESET) {
-
-        //if (frame.invalid_member() & H9Frame::VALID_SEQNUM) {
-            frame.seqnum(next_seqnum);
-            next_seqnum = (next_seqnum + 1) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
-        //}
-    }
+    // if (frame.type() == H9Frame::Type::SET_REG ||
+    //     frame.type() == H9Frame::Type::GET_REG ||
+    //     frame.type() == H9Frame::Type::SET_BIT ||
+    //     frame.type() == H9Frame::Type::CLEAR_BIT ||
+    //     frame.type() == H9Frame::Type::NODE_UPGRADE ||
+    //     frame.type() == H9Frame::Type::NODE_RESET) {
+    //
+    //     //if (frame.invalid_member() & H9Frame::VALID_SEQNUM) {
+    //         frame.seqnum(next_seqnum);
+    //         next_seqnum = (next_seqnum + 1) & ((1 << H9FRAME_SEQNUM_BIT_LENGTH) - 1);
+    //     //}
+    // }
     return send_data(frame);
 }
 

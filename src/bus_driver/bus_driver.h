@@ -60,8 +60,8 @@ class BusDriver {
      */
     std::function<void(bool)> send_ack_callback;
 
-    /** Next sequence number to assign (wraps modulo 2^H9FRAME_SEQNUM_BIT_LENGTH). */
-    std::uint8_t next_seqnum;
+    // /** Next sequence number to assign (wraps modulo 2^H9FRAME_SEQNUM_BIT_LENGTH). */
+    // std::uint8_t next_seqnum;
 
   protected:
     /** Socket/port file descriptor used by the driver; -1 when closed. */

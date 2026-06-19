@@ -31,8 +31,31 @@ bool Bus::recv_thread_send() {
     bus_frame->activate_send_finish_promise(bus.size());
     if (!bus_frame->raw()) {
         bus_frame->source_id(_bus_id);
-        bus_frame->seqnum(next_seqnum);
-        ++next_seqnum;
+
+        switch (bus_frame->type()) {
+            case H9Frame::Type::RES1:
+            case H9Frame::Type::PAGE_START:
+            case H9Frame::Type::QUIT_BOOTLOADER:
+            case H9Frame::Type::PAGE_FILL:
+            case H9Frame::Type::BOOTLOADER_TURNED_ON:
+            //case H9Frame::Type::PAGE_FILL_NEXT:
+            //case H9Frame::Type::PAGE_WRITED:
+            //case H9Frame::Type::PAGE_FILL_BREAK:
+            //case H9Frame::Type::COMMAND_ERROR:
+            //case H9Frame::Type::REG_VALUE:
+            case H9Frame::Type::SET_REG:
+            case H9Frame::Type::GET_REG:
+            case H9Frame::Type::SET_BIT:
+            case H9Frame::Type::CLEAR_BIT:
+            case H9Frame::Type::NODE_UPGRADE:
+            case H9Frame::Type::NODE_RESET:
+                bus_frame->seqnum(next_seqnum);
+                ++next_seqnum;
+                break;
+            default:
+                break;
+        }
+
         if (next_seqnum > H9Frame::SEQNUM_MAX_VALUE) {
             next_seqnum = 0;
         }

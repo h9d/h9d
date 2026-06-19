@@ -579,20 +579,14 @@ std::string H9dConfigurator::version_string() {
     return std::move(ret);
 }
 
-std::string H9dConfigurator::version() {
-    return std::move(std::string(H9_VERSION));
+unsigned int H9dConfigurator::version_major() {
+    return VERSION_MAJOR;
 }
 
-std::string H9dConfigurator::version_commit_sha() {
-#ifdef GITVERSION_COMMIT_SHA
-    return std::move(std::string(GITVERSION_COMMIT_SHA));
-#endif
-    return std::move(std::string(""));
+unsigned int H9dConfigurator::version_minor() {
+    return VERSION_MINOR;
 }
 
-bool H9dConfigurator::version_dirty() {
-#ifdef GITVERSION_DIRTY
-    return true;
-#endif
-    return false;
+unsigned int H9dConfigurator::version_patch() {
+    return VERSION_PATCH;
 }

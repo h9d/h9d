@@ -88,7 +88,6 @@ class Node: protected RawNode {
     regvalue_t get_register(std::uint8_t reg);
     regvalue_t set_register_bit(std::uint8_t reg, std::uint8_t bit_num);
     regvalue_t clear_register_bit(std::uint8_t reg, std::uint8_t bit_num);
-    regvalue_t toggle_register_bit(std::uint8_t reg, std::uint8_t bit_num);
 
     /// Read value from frame
     /// @param[in] frame

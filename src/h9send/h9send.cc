@@ -25,9 +25,11 @@ class H9SendConfigurator: public H9Configurator {
         // clang-format off
         options.add_options("")
                 ("s,src_id", "Source id, if set, a raw frame will be sent", cxxopts::value<std::uint8_t>())
+                ("t,type", "Frame type", cxxopts::value<std::underlying_type_t<H9Frame::Type>>())
+                ("f,flags", "Flags", cxxopts::value<std::uint8_t>())
                 ("d,dst_id", "Destination id", cxxopts::value<std::uint8_t>())
                 ("S,seqnum", "Seqnum, if set, a raw frame will be sent", cxxopts::value<std::uint8_t>())
-                ("t,type", "Frame type", cxxopts::value<std::underlying_type_t<H9Frame::Type>>())
+                ("g,group", "Broadcast group", cxxopts::value<std::uint16_t>())
                 ("r,repeat", "Repeat the frame every given time in seconds", cxxopts::value<unsigned int>())
                 ;
         // clang-format on
@@ -55,11 +57,24 @@ int main(int argc, char* argv[]) {
     bool raw = false;
 
     if (res.count("src_id")) {
-        frame.source_id(res["src_id"].as<std::uint16_t>());
+        frame.source_id(res["src_id"].as<std::uint8_t>());
         raw = true;
     }
     else {
         frame.source_id(h9.get_default_source_id());
+    }
+
+    if (res.count("type")) {
+        frame.type(H9Frame::from_underlying<H9Frame::Type>(res["type"].as<std::underlying_type_t<H9Frame::Type>>()));
+    }
+
+    if (res.count("flags")) {
+        frame.flags(H9Frame::from_underlying<H9Frame::Flags>(res["flags"].as<std::uint8_t>()));
+        raw = true;
+    }
+
+    if (res.count("dst_id")) {
+        frame.destination_id(res["dst_id"].as<std::uint8_t>());
     }
 
     if (res.count("seqnum")) {
@@ -67,12 +82,8 @@ int main(int argc, char* argv[]) {
         raw = true;
     }
 
-    if (res.count("dst_id")) {
-        frame.destination_id(res["dst_id"].as<std::uint16_t>());
-    }
-
-    if (res.count("type")) {
-        frame.type(static_cast<H9Frame::Type>(res["type"].as<std::underlying_type_t<H9Frame::Type>>()));
+    if (res.count("group")) {
+        frame.broadcast_group(res["group"].as<std::uint16_t>());
     }
 
     frame.dlc(0);
