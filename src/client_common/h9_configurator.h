@@ -11,6 +11,7 @@
 #include "h9connector.h"
 #include <confuse.h>
 #include <cxxopts/cxxopts.hpp>
+#include <map>
 #include <memory>
 
 #include "bus_driver.h"
@@ -43,6 +44,7 @@ class H9Configurator {
     std::string host;
     int port;
     std::string path;       // (/dev/ttyUSB0)
+    std::map<std::string, std::string> query;
 
     std::string config_file;
     int source_id;

@@ -22,6 +22,7 @@
 #include "loop_driver.h"
 #include "pipe_driver.h"
 #include "slcan_driver.h"
+#include "socketcan_driver.h"
 #include "udp_driver.h"
 #ifdef H9_SOCKETCAN_DRIVER
 #include "socketcan_driver.h"
@@ -62,6 +63,25 @@ namespace {
         parts.push_back(s.substr(start));
         return parts;
     }
+
+    std::string unescape_query_value(const std::string& s) {
+        std::string out;
+        out.reserve(s.size());
+        for (std::size_t i = 0; i < s.size(); ++i) {
+            if (s[i] == '\\' && i + 1 < s.size()) {
+                switch (s[++i]) {
+                    case 'r':  out += '\r'; break;
+                    case 'n':  out += '\n'; break;
+                    case 't':  out += '\t'; break;
+                    case '\\': out += '\\'; break;
+                    default:   out += '\\'; out += s[i]; break;
+                }
+            } else {
+                out += s[i];
+            }
+        }
+        return out;
+    }
 } // namespace
 
 H9Configurator::H9Configurator(const std::string& app_name, const std::string& app_desc):
@@ -84,7 +104,7 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
             ("V,version", "Show version")
             ;
     options.add_options("connection")
-            ("c,connect", "Connection URI\nh9d://<ip>[:<port>]\nslcan:///<tty path>\nsocketcan://<interface>\nudp://<src port>@<ip>:<port>", cxxopts::value<std::string>())
+            ("c,connect", "Connection URI\nh9d://<ip>[:<port>]\nslcan:///<tty path>?con_str=S4\\rO\\r\nsocketcan://<interface>\nudp://<ip>:<port>/?src_port=<src port>\npipe:///?in=<in file>&out=<out file>", cxxopts::value<std::string>())
             ("F,config", "User config file", cxxopts::value<std::string>())
             ;
     // clang-format on
@@ -113,8 +133,9 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
             connection_uri = std::string(result["connect"].as<std::string>());
         }
 
-        config_file = std::string(result["config"].as<std::string>());
-
+        if (result.count("config")) {
+            config_file = std::string(result["config"].as<std::string>());
+        }
 
         parse_app_specific_opt(result);
 
@@ -230,6 +251,9 @@ void H9Configurator::load_configuration() {
     }
 
     SPDLOG_DEBUG("uri scheme: {}, authority: {}, userinfo: {}, host: {}, port: {}, path: {}", scheme, authority, userinfo, host, port, path);
+    for (auto v : query) {
+        SPDLOG_DEBUG("uri query: {} = {}", v.first, v.second);
+    }
 }
 
 void H9Configurator::logger_initial_setup() {
@@ -258,10 +282,11 @@ bool H9Configurator::is_uri(const std::string& s) {
 void H9Configurator::parse_uri(const std::string& uri) {
     scheme.clear();
     authority.clear();
-    userinfo = _app_name;
+    userinfo.clear();
     host.clear();
-    port = default_h9d_port;
+    port = -1;
     path.clear();
+    query.clear();
 
     auto colon = uri.find(':');
     if (colon == std::string::npos)
@@ -305,40 +330,58 @@ void H9Configurator::parse_uri(const std::string& uri) {
     } else {
         path = rest;
     }
+
+    auto qmark = path.find('?');
+    if (qmark != std::string::npos) {
+        std::string query_str = path.substr(qmark + 1);
+        path = path.substr(0, qmark);
+        std::string::size_type pos = 0;
+        while (pos <= query_str.size()) {
+            auto amp = query_str.find('&', pos);
+            std::string token = query_str.substr(pos, amp == std::string::npos ? std::string::npos : amp - pos);
+            auto eq = token.find('=');
+            if (eq != std::string::npos)
+                query[token.substr(0, eq)] = unescape_query_value(token.substr(eq + 1));
+            else if (!token.empty())
+                query[token] = "";
+            if (amp == std::string::npos) break;
+            pos = amp + 1;
+        }
+    }
 }
 
 std::unique_ptr<BusDriver> H9Configurator::get_bus_driver() {
     if (scheme == "slcan") {
-        //if (parts.size() < 2)
-        //    throw std::invalid_argument("slcan requires tty: slcan:///dev/ttyUSB0");
-        return std::make_unique<SlcanDriver>(_app_name, path, "S4\rO\r");
+        if (path.empty())
+            throw std::invalid_argument("slcan requires tty e.g.: slcan:///dev/ttyUSB0");
+        return std::make_unique<SlcanDriver>(_app_name, path, query.contains("con_str") ? query["con_str"] : "S4\rO\r");
     }
     if (scheme == "socketcan") {
 #ifdef H9_SOCKETCAN_DRIVER
-        if (parts.size() < 2)
-            throw std::invalid_argument("socketcan requires interface: socketcan:can0");
+        if (authority.empty())
+            throw std::invalid_argument("socketcan requires interface e.g.: socketcan://can0");
         return std::make_unique<SocketCANDriver>(_app_name, authority);
 #else
         throw std::invalid_argument("SocketCAN driver not available on this platform");
 #endif
     }
     if (scheme == "udp") {
-        //if (parts.size() < 4)
-        //    throw std::invalid_argument("udp requires local_port:remote_addr:remote_port: udp:1211:127.0.0.1:1321");
-        //return std::make_unique<UDPDriver>(_app_name, parts[1], parts[2], parts[3]);
+        if (host.empty() || port < 1)
+            throw std::invalid_argument("udp requires e.g.: udp://127.0.0.1:1321/?src_port=1322");
+        return std::make_unique<UDPDriver>(_app_name, query.contains("src_port") ? query["src_port"] : std::to_string(port), host, std::to_string(port));
     }
     if (scheme == "h9d") {
-        //if (parts.size() < 3)
-         //   throw std::invalid_argument("h9d requires hostname:port: h9d://127.0.0.1:1211");
-        //return std::make_unique<H9DDriver>(_app_name, host, std::to_string(port), userinfo);
+        if (host.empty())
+            throw std::invalid_argument("h9d requires e.g.: h9d://127.0.0.1:1211");
+        return std::make_unique<H9DDriver>(_app_name, host, port > 0 ? std::to_string(port) : std::to_string(default_h9d_port), userinfo.empty() ? _app_name : userinfo);
     }
     if (scheme == "pipe") {
-        //if (parts.size() < 3)
-        //    throw std::invalid_argument("pipe requires local_path:remote_path: pipe:/tmp/h9_a.sock:/tmp/h9_b.sock");
-        //return std::make_unique<PipeDriver>(_app_name, parts[1], parts[2]);
+        if (!query.contains("in") || query["in"].empty() || !query.contains("out") || query["out"].empty())
+            throw std::invalid_argument("pipe requires e.g.: pipe:///?in=/tmp/h9_in&out=/tmp/h9_out");
+        return std::make_unique<PipeDriver>(_app_name, query["in"], query["out"]);
     }
     if (scheme == "loop") {
-        //return std::make_unique<LoopDriver>(_app_name);
+        return std::make_unique<LoopDriver>(_app_name);
     }
 
     throw std::invalid_argument("Unknown connection scheme '" + scheme + "'. "

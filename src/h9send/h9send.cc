@@ -98,17 +98,19 @@ int main(int argc, char* argv[]) {
         frame.data(data);
     }
 
-    std::unique_ptr<BusDriver> bus = h9.get_bus_driver();
+    std::unique_ptr<BusDriver> bus;
 
     try {
+        bus = h9.get_bus_driver();
         bus->open();
-    }
-    catch (std::system_error& e) {
-        SPDLOG_ERROR("Can not connect to h9bus {}:{}: {}.", h9.get_host(), h9.get_port(), e.code().message());
+    } catch (std::invalid_argument& e) {
+        SPDLOG_ERROR("Can not connect to bus: {}.", e.what());
         exit(EXIT_FAILURE);
-    }
-    catch (std::runtime_error& e) {
-        SPDLOG_ERROR("Can not connect to h9bus {}:{}: {}.", h9.get_host(), h9.get_port(), e.what());
+    } catch (std::system_error& e) {
+        SPDLOG_ERROR("Can not connect to bus: {}.", e.code().message());
+        exit(EXIT_FAILURE);
+    } catch (std::runtime_error& e) {
+        SPDLOG_ERROR("Can not connect to bus: {}.", e.what());
         exit(EXIT_FAILURE);
     }
 
