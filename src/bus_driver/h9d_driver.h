@@ -20,9 +20,9 @@ class H9DDriver: public BusDriver {
   private:
     H9MsgSocket h9socket;
     int next_msg_id;
-
+    std::string entity;
   public:
-    H9DDriver(const std::string& name, std::string hostname, std::string port);
+    H9DDriver(const std::string& name, std::string hostname, std::string port, const std::string& entity);
     int open() override;
     void close() override;
 

@@ -23,7 +23,7 @@ class H9Configurator {
 
     constexpr static const char* default_config = H9_CONFIG_FILE;
     constexpr static const char* default_user_config = H9_USER_CONFIG_FILE;
-    constexpr static char default_h9d_host[] = "localhost";
+    constexpr static char default_connection_uri[] = "h9d://localhost";
     constexpr static int default_h9d_port = H9D_DEFAULT_PORT;
     constexpr static int default_source_id = DEFAULT_SOURCE_ID_FOR_CLIENT;
   protected:
@@ -35,10 +35,20 @@ class H9Configurator {
 
     bool debug;
     int verbose;
+    std::string connection_uri;
+
+    std::string scheme;     // (h9d, slcan, socketcan, udp, pipe, loop)
+    std::string authority;  // (192.168.1.10:10001, can0) == userinfo@host:port
+    std::string userinfo;
     std::string host;
-    std::string port;
+    int port;
+    std::string path;       // (/dev/ttyUSB0)
+
     std::string config_file;
     int source_id;
+
+    static bool is_uri(const std::string&);
+    void parse_uri(const std::string& uri);
 
     virtual void add_app_specific_opt() {}
     virtual void parse_app_specific_opt(const cxxopts::ParseResult& result) {}

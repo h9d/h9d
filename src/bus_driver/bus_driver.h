@@ -96,7 +96,7 @@ class BusDriver {
 
     /**
      * @brief Constructor.
-     * @param name         Instance name (from configuration).
+     * @param name         Instance name (from configuration). Used as the frame's origin.
      * @param driver_name  Driver type identifier.
      */
     explicit BusDriver(const std::string& name, std::string driver_name);

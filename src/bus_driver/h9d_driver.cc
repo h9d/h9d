@@ -10,9 +10,10 @@
 #include <system_error>
 #include <utility>
 
-H9DDriver::H9DDriver(const std::string& name, std::string hostname, std::string port):
+H9DDriver::H9DDriver(const std::string& name, std::string hostname, std::string port, const std::string& entity):
     BusDriver(name, "H9D"),
     h9socket(std::move(hostname), std::move(port)),
+    entity(entity),
     next_msg_id(1) {
 }
 
@@ -20,7 +21,7 @@ int H9DDriver::open() {
     if (h9socket.connect() < 0) {
         throw std::system_error(errno, std::system_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
     }
-    int res = h9socket.authentication("h9ddriver");
+    int res = h9socket.authentication(entity);
     if (res != 1) {
         throw std::runtime_error("Authentication fail");
     }

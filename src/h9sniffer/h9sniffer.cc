@@ -41,7 +41,7 @@ class H9SnifferConfigurator: public H9Configurator {
     bool simple;
 
     H9SnifferConfigurator():
-        H9Configurator("h9sniffer", "The H9 bus packets sniffer.") {}
+        H9Configurator("h9sniffer", "The H9 bus frames sniffer.") {}
 };
 
 } // namespace

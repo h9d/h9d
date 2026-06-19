@@ -66,10 +66,10 @@ namespace {
 
 H9Configurator::H9Configurator(const std::string& app_name, const std::string& app_desc):
     options(app_name, app_desc),
-    _app_name(app_desc),
+    _app_name(app_name),
     _app_desc(app_desc) {
     host = "";
-    port = "";
+    port = -1;
     source_id = default_source_id;
 }
 
@@ -84,9 +84,8 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
             ("V,version", "Show version")
             ;
     options.add_options("connection")
-            ("c,connect", "Connection address", cxxopts::value<std::string>())
-            ("p,port", "Connection port", cxxopts::value<int>()->default_value(std::to_string(default_h9d_port)))
-            ("F,config", "User config file", cxxopts::value<std::string>()->default_value(""))
+            ("c,connect", "Connection URI\nh9d://<ip>[:<port>]\nslcan:///<tty path>\nsocketcan://<interface>\nudp://<src port>@<ip>:<port>", cxxopts::value<std::string>())
+            ("F,config", "User config file", cxxopts::value<std::string>())
             ;
     // clang-format on
 
@@ -111,11 +110,7 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
         verbose = result.count("verbose");
 
         if (result.count("connect")) {
-            host = std::string(result["connect"].as<std::string>());
-        }
-
-        if (result.count("port")) {
-            port = std::to_string(result["port"].as<int>());
+            connection_uri = std::string(result["connect"].as<std::string>());
         }
 
         config_file = std::string(result["config"].as<std::string>());
@@ -132,14 +127,14 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
 }
 
 void H9Configurator::load_configuration() {
-    cfg_opt_t cfg_h9bus_opts[] = {
-        CFG_STR("HostName", nullptr, CFGF_NONE | CFGF_NODEFAULT),
-        CFG_INT("Port", 0, CFGF_NONE | CFGF_NODEFAULT),
+    cfg_opt_t cfg_connection_opts[] = {
+        CFG_STR("uri", nullptr, CFGF_NONE | CFGF_NODEFAULT),
         CFG_INT("SourceID", 0, CFGF_NONE | CFGF_NODEFAULT),
         CFG_END()};
     cfg_opt_t cfg_opts[] = {
         CFG_INT("DefaultSourceID", default_source_id, CFGF_NONE),
-        CFG_SEC("h9d", cfg_h9bus_opts, CFGF_MULTI | CFGF_TITLE),
+        CFG_STR("default", nullptr, CFGF_NONE | CFGF_NODEFAULT),
+        CFG_SEC("connection", cfg_connection_opts, CFGF_MULTI | CFGF_TITLE),
         CFG_END()};
 
     cfg = cfg_init(cfg_opts, CFGF_NONE);
@@ -192,8 +187,10 @@ void H9Configurator::load_configuration() {
         cfg = nullptr;
     }
 
-    if (host.empty()) {
-        host = std::string(default_h9d_host);
+    std::string tmp_uri_con = connection_uri;;
+
+    if (!is_uri(connection_uri)) {
+        connection_uri.clear();
     }
 
     if (cfg) {
@@ -201,25 +198,38 @@ void H9Configurator::load_configuration() {
 
         source_id = cfg_getint(cfg, "DefaultSourceID");
 
-        for (int i = 0; i < cfg_size(cfg, "h9d"); i++) {
-            cfg_t* h9d_sec = cfg_getnsec(cfg, "h9d", i);
-            if (host == cfg_title(h9d_sec)) {
-                if (cfg_size(h9d_sec, "SourceID")) {
-                    source_id = cfg_getint(h9d_sec, "SourceID");
+        if (connection_uri.empty()) {
+            if (tmp_uri_con.empty() && cfg_size(cfg, "default")) {
+                tmp_uri_con = cfg_getstr(cfg, "default");
+            }
+
+            for (int i = 0; i < cfg_size(cfg, "connection"); i++) {
+                cfg_t* h9d_sec = cfg_getnsec(cfg, "connection", i);
+                if (tmp_uri_con == cfg_title(h9d_sec)) {
+                    if (cfg_size(h9d_sec, "SourceID")) {
+                        source_id = cfg_getint(h9d_sec, "SourceID");
+                    }
+                    if (cfg_size(h9d_sec, "uri")) {
+                        connection_uri = cfg_getstr(h9d_sec, "uri");
+                    }
+                    break;
                 }
-                if (cfg_size(h9d_sec, "HostName")) {
-                    host = cfg_getstr(h9d_sec, "HostName");
-                }
-                if (port.empty() && cfg_size(h9d_sec, "Port")) {
-                    port = std::to_string(cfg_getint(h9d_sec, "Port"));
-                }
-                break;
             }
         }
     }
-    if (port.empty()) {
-        port = std::to_string(default_h9d_port);
+
+    if (connection_uri.empty()) {
+        connection_uri = default_connection_uri;
     }
+    try {
+        parse_uri(connection_uri);
+    }
+    catch (const std::invalid_argument& e) {
+        SPDLOG_ERROR("{}", e.what());
+        exit(EXIT_FAILURE);
+    }
+
+    SPDLOG_DEBUG("uri scheme: {}, authority: {}, userinfo: {}, host: {}, port: {}, path: {}", scheme, authority, userinfo, host, port, path);
 }
 
 void H9Configurator::logger_initial_setup() {
@@ -241,56 +251,102 @@ void H9Configurator::logger_setup() {
         h9->set_level(static_cast<spdlog::level::level_enum>(tmp_level));
 }
 
-std::unique_ptr<BusDriver> H9Configurator::get_bus_driver() {
-    const std::string& conn = host;
-    const std::string& name = _app_name;
-    auto parts = split_connection_string(conn);
+bool H9Configurator::is_uri(const std::string& s) {
+    return s.find("://") != std::string::npos;
+}
 
-    if (parts.empty() || parts[0].empty()) {
-        throw std::invalid_argument("Empty connection string");
+void H9Configurator::parse_uri(const std::string& uri) {
+    scheme.clear();
+    authority.clear();
+    userinfo = _app_name;
+    host.clear();
+    port = default_h9d_port;
+    path.clear();
+
+    auto colon = uri.find(':');
+    if (colon == std::string::npos)
+        throw std::invalid_argument("Invalid URI (missing scheme): " + uri);
+
+    scheme = uri.substr(0, colon);
+    std::string rest = uri.substr(colon + 1);
+
+    if (rest.starts_with("//")) {
+        rest = rest.substr(2);
+
+        auto slash = rest.find('/');
+        authority = (slash == std::string::npos) ? rest : rest.substr(0, slash);
+        path      = (slash == std::string::npos) ? ""   : rest.substr(slash);
+
+        std::string hostport;
+        auto at = authority.find('@');
+        if (at != std::string::npos) {
+            userinfo = authority.substr(0, at);
+            hostport = authority.substr(at + 1);
+        } else {
+            hostport = authority;
+        }
+
+        // rfind(':') handles IPv6 addresses like [::1]:port
+        auto port_sep = hostport.rfind(':');
+        if (port_sep != std::string::npos) {
+            host = hostport.substr(0, port_sep);
+            const std::string port_str = hostport.substr(port_sep + 1);
+            if (!port_str.empty()) {
+                try {
+                    port = std::stoi(port_str);
+                }
+                catch (...) {
+                    throw std::invalid_argument("Invalid port in URI: " + uri);
+                }
+            }
+        } else {
+            host = hostport;
+        }
+    } else {
+        path = rest;
     }
+}
 
-    const std::string& scheme = parts[0];
-
+std::unique_ptr<BusDriver> H9Configurator::get_bus_driver() {
     if (scheme == "slcan") {
-        if (parts.size() < 2)
-            throw std::invalid_argument("slcan requires tty: slcan:/dev/ttyUSB0");
-        return std::make_unique<SlcanDriver>(name, parts[1], "S4\rO\r");
+        //if (parts.size() < 2)
+        //    throw std::invalid_argument("slcan requires tty: slcan:///dev/ttyUSB0");
+        return std::make_unique<SlcanDriver>(_app_name, path, "S4\rO\r");
     }
     if (scheme == "socketcan") {
 #ifdef H9_SOCKETCAN_DRIVER
         if (parts.size() < 2)
             throw std::invalid_argument("socketcan requires interface: socketcan:can0");
-        return std::make_unique<SocketCANDriver>(name, parts[1]);
+        return std::make_unique<SocketCANDriver>(_app_name, authority);
 #else
         throw std::invalid_argument("SocketCAN driver not available on this platform");
 #endif
     }
     if (scheme == "udp") {
-        if (parts.size() < 4)
-            throw std::invalid_argument("udp requires local_port:remote_addr:remote_port: udp:1211:127.0.0.1:1321");
-        return std::make_unique<UDPDriver>(name, parts[1], parts[2], parts[3]);
+        //if (parts.size() < 4)
+        //    throw std::invalid_argument("udp requires local_port:remote_addr:remote_port: udp:1211:127.0.0.1:1321");
+        //return std::make_unique<UDPDriver>(_app_name, parts[1], parts[2], parts[3]);
     }
     if (scheme == "h9d") {
-        if (parts.size() < 3)
-            throw std::invalid_argument("h9d requires hostname:port: h9d:127.0.0.1:1211");
-        return std::make_unique<H9DDriver>(name, parts[1], parts[2]);
+        //if (parts.size() < 3)
+         //   throw std::invalid_argument("h9d requires hostname:port: h9d://127.0.0.1:1211");
+        //return std::make_unique<H9DDriver>(_app_name, host, std::to_string(port), userinfo);
     }
     if (scheme == "pipe") {
-        if (parts.size() < 3)
-            throw std::invalid_argument("pipe requires local_path:remote_path: pipe:/tmp/h9_a.sock:/tmp/h9_b.sock");
-        return std::make_unique<PipeDriver>(name, parts[1], parts[2]);
+        //if (parts.size() < 3)
+        //    throw std::invalid_argument("pipe requires local_path:remote_path: pipe:/tmp/h9_a.sock:/tmp/h9_b.sock");
+        //return std::make_unique<PipeDriver>(_app_name, parts[1], parts[2]);
     }
     if (scheme == "loop") {
-        return std::make_unique<LoopDriver>(name);
+        //return std::make_unique<LoopDriver>(_app_name);
     }
 
     throw std::invalid_argument("Unknown connection scheme '" + scheme + "'. "
-        "Supported: slcan, socketcan, udp, h9d, pipe, loop");
+        "Supported: slcan, socketcan, udp, h9, pipe, loop");
 }
 
 H9Connector H9Configurator::get_connector() {
-    return H9Connector(host, port);
+    return H9Connector(host, port > 0 ? std::to_string(port) : "");
 }
 
 std::uint16_t H9Configurator::get_default_source_id() {
@@ -302,7 +358,7 @@ std::string H9Configurator::get_host() const {
 }
 
 std::string H9Configurator::get_port() const {
-    return port;
+    return port > 0 ? std::to_string(port) : "";
 }
 
 bool H9Configurator::get_debug() const {
