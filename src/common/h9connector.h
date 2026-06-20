@@ -32,6 +32,9 @@ class H9Connector {
     void close() noexcept;
     void shutdown_read() noexcept;
 
+    bool is_connected() const noexcept;
+    int get_socket_fd() noexcept;
+
     jsonrpcpp::entity_ptr recv();
 
     void send(jsonrpcpp::entity_ptr msg);

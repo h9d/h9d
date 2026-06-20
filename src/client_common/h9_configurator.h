@@ -46,6 +46,8 @@ class H9Configurator {
     std::string path;       // (/dev/ttyUSB0)
     std::map<std::string, std::string> query;
 
+    std::unique_ptr<H9Connector> _connector;
+
     std::string config_file;
     int source_id;
 
@@ -55,16 +57,20 @@ class H9Configurator {
     virtual void add_app_specific_opt() {}
     virtual void parse_app_specific_opt(const cxxopts::ParseResult& result) {}
   public:
+    constexpr static const char* H9D_SCHEME = "h9d";
+
     H9Configurator(const std::string& app_name, const std::string& app_desc);
     cxxopts::ParseResult parse_command_line_arg(int argc, char** argv);
     void load_configuration();
     void logger_initial_setup();
     void logger_setup();
 
-    H9Connector get_connector();
+    H9Connector& get_connector();
     std::unique_ptr<BusDriver> get_bus_driver();
     std::uint16_t get_default_source_id();
 
+    std::string get_scheme() const;
+    std::string get_userinfo() const;
     std::string get_host() const;
     std::string get_port() const;
     bool get_debug() const;

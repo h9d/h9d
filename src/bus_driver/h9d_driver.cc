@@ -8,77 +8,91 @@
 
 #include <nlohmann/json.hpp>
 #include <system_error>
-#include <utility>
 
-H9DDriver::H9DDriver(const std::string& name, std::string hostname, std::string port, const std::string& entity):
+H9DDriver::H9DDriver(const std::string& name, H9Connector& connector, const std::string& entity):
     BusDriver(name, "H9D"),
-    h9socket(std::move(hostname), std::move(port)),
-    entity(entity),
+    _entity(entity),
+    _connector(connector),
     next_msg_id(1) {
 }
 
 int H9DDriver::open() {
-    if (h9socket.connect() < 0) {
-        throw std::system_error(errno, std::system_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
-    }
-    int res = h9socket.authentication(entity);
-    if (res != 1) {
-        throw std::runtime_error("Authentication fail");
+    if (!_connector.is_connected()) {
+        _connector.connect(_entity);
     }
 
-    socket_fd = h9socket.get_socket();
+    socket_fd = _connector.get_socket_fd();
 
-    nlohmann::json req = {
-        {"jsonrpc", "2.0"},
-        {"id", ++next_msg_id},
-        {"method", "subscribe"},
-        {"params", {{"event", "frame"}}}
-    };
-    if (h9socket.send(req) <= 0) {
-        throw std::system_error(errno, std::system_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
+    jsonrpcpp::Request r(_connector.get_next_id(), "subscribe", {"event", "frame"});
+
+    try {
+        _connector.send(std::make_shared<jsonrpcpp::Request>(r));
+    }
+    catch (std::system_error& e) {
+        SPDLOG_ERROR("Can not send request: {}.", e.code().message());
+        exit(EXIT_FAILURE);
+    }
+    catch (std::runtime_error& e) {
+        SPDLOG_ERROR("Can not send request: {}.", e.what());
+        exit(EXIT_FAILURE);
     }
 
-    return socket_fd;
+    return _connector.get_socket_fd();
 }
 
 void H9DDriver::close() {
     socket_fd = -1;
-    h9socket.close();
+    _connector.close();
 }
 
 int H9DDriver::recv_data(H9Frame& frame) {
-    nlohmann::json json;
-    int res = h9socket.recv_complete_msg(json);
-    if (res < 0) {
-        throw std::system_error(errno, std::system_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
+    jsonrpcpp::entity_ptr raw_msg;
+
+    try {
+        raw_msg = _connector.recv();
     }
-    if (res == 0) {
-        return SOCKET_CLOSE;
+    catch (std::system_error& e) {
+        SPDLOG_ERROR("Error during message received: {}.", e.code().message());
+        exit(EXIT_FAILURE);
     }
-    if (json.is_discarded()) {
-        return EMPTY_BUF;
+    catch (std::runtime_error& e) {
+        SPDLOG_ERROR("Error during message received: {}.",  e.what());
+        exit(EXIT_FAILURE);
     }
 
-    if (json.contains("method") && json["method"] == "on_frame") {
-        frame.origin(name);
-        json["params"]["frame"].get_to(frame);
-        return RECV_FRAME;
+    if (raw_msg && raw_msg->is_notification()) {
+        jsonrpcpp::notification_ptr notification = std::dynamic_pointer_cast<jsonrpcpp::Notification>(raw_msg);
+        if (notification && notification->method() == "on_frame") {
+            Json params = notification->params().to_json();
+            if (params.contains("frame")) {
+                frame.origin(name);
+                params["frame"].get_to(frame);
+                return RECV_FRAME;
+            }
+        }
     }
+
     return EMPTY_BUF;
 }
 
 int H9DDriver::send_data(H9Frame& frame) {
-    nlohmann::json req = {
-        {"jsonrpc", "2.0"},
-        {"id", ++next_msg_id},
-        {"method", "send_frame"},
-        {"params", {{"frame", frame}, {"raw", true}}}
-    };
+    socket_fd = _connector.get_socket_fd();
 
-    int ret = h9socket.send(req);
-    if (ret <= 0) {
-        throw std::system_error(errno, std::system_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
+    jsonrpcpp::Request r(_connector.get_next_id(), "send_frame", nlohmann::json({{"frame", frame}, {"raw", true}}));
+
+    try {
+        _connector.send(std::make_shared<jsonrpcpp::Request>(r));
     }
+    catch (std::system_error& e) {
+        SPDLOG_ERROR("Can not send request: {}.", e.code().message());
+        exit(EXIT_FAILURE);
+    }
+    catch (std::runtime_error& e) {
+        SPDLOG_ERROR("Can not send request: {}.", e.what());
+        exit(EXIT_FAILURE);
+    }
+
     frame_sent_correctly();
-    return ret;
+    return 1;
+    //return ret;
 }

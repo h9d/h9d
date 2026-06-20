@@ -17,7 +17,7 @@
 class JSONTCPSocket: protected TCPSocket {
     //TODO: ogarnac bledy, szczegolnie z parsowaniem jsona
     //TODO: JSONTCPSocket i authentication moga zrzucac wyjatki, moze przerobic to na retval? albo dedykowany typ bo moga am byc wyjatki z parsera jsona (authentication)
-public:
+  public:
     explicit JSONTCPSocket(int socket);
     JSONTCPSocket(std::string hostname, std::string port) noexcept;
 
@@ -46,6 +46,8 @@ public:
     int recv_complete_msg(nlohmann::json &json) noexcept;
 
     using TCPSocket::close;
+    using TCPSocket::is_connected;
+
     void shutdown_read() noexcept;
 
     using TCPSocket::get_remote_address;

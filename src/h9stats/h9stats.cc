@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     h9.logger_setup();
     h9.load_configuration();
 
-    H9Connector h9_connector = h9.get_connector();
+    H9Connector& h9_connector = h9.get_connector();
 
     try {
         h9_connector.connect("h9stat");

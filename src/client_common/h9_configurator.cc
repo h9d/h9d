@@ -370,10 +370,10 @@ std::unique_ptr<BusDriver> H9Configurator::get_bus_driver() {
             throw std::invalid_argument("udp requires e.g.: udp://127.0.0.1:1321/?src_port=1322");
         return std::make_unique<UDPDriver>(_app_name, query.contains("src_port") ? query["src_port"] : std::to_string(port), host, std::to_string(port));
     }
-    if (scheme == "h9d") {
+    if (scheme == H9D_SCHEME) {
         if (host.empty())
             throw std::invalid_argument("h9d requires e.g.: h9d://127.0.0.1:1211");
-        return std::make_unique<H9DDriver>(_app_name, host, port > 0 ? std::to_string(port) : std::to_string(default_h9d_port), userinfo.empty() ? _app_name : userinfo);
+        return std::make_unique<H9DDriver>(_app_name, get_connector(), userinfo.empty() ? _app_name : userinfo);
     }
     if (scheme == "pipe") {
         if (!query.contains("in") || query["in"].empty() || !query.contains("out") || query["out"].empty())
@@ -388,12 +388,23 @@ std::unique_ptr<BusDriver> H9Configurator::get_bus_driver() {
         "Supported: slcan, socketcan, udp, h9, pipe, loop");
 }
 
-H9Connector H9Configurator::get_connector() {
-    return H9Connector(host, port > 0 ? std::to_string(port) : "");
+H9Connector& H9Configurator::get_connector() {
+    if (!_connector) {
+        _connector = std::make_unique<H9Connector>(host, port > 0 ? std::to_string(port) : std::to_string(default_h9d_port));
+    }
+    return *_connector;
 }
 
 std::uint16_t H9Configurator::get_default_source_id() {
     return source_id;
+}
+
+std::string H9Configurator::get_scheme() const {
+    return scheme;
+}
+
+std::string H9Configurator::get_userinfo() const {
+    return userinfo;
 }
 
 std::string H9Configurator::get_host() const {

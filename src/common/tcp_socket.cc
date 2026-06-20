@@ -119,6 +119,17 @@ void TCPSocket::close() noexcept {
     _socket = -1;
 }
 
+bool TCPSocket::is_connected() const noexcept {
+    int error = 0;
+    socklen_t len = sizeof(error);
+    int result = getsockopt(_socket, SOL_SOCKET, SO_ERROR, &error, &len);
+    if (result != 0 || error != 0) {
+        return false;
+    }
+    return true;
+}
+
+
 int TCPSocket::recv(std::string& buf, int timeout_in_seconds) noexcept {
     if (timeout_in_seconds) {
         struct timeval tv;

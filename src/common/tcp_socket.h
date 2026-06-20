@@ -37,6 +37,8 @@ class TCPSocket {
     int connect() noexcept;
     void close() noexcept;
 
+    bool is_connected() const noexcept;
+
     /// @param[out] buf
     /// @param[in] timeout_in_seconds If >0 set recv timeout
     /// @retval -1 an error occurred and the global variable 'errno' is set to indicate the error.

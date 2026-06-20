@@ -42,6 +42,14 @@ void H9Connector::shutdown_read() noexcept {
     h9socket.shutdown_read();
 }
 
+bool H9Connector::is_connected() const noexcept {
+    return h9socket.is_connected();
+}
+
+int H9Connector::get_socket_fd() noexcept {
+    return h9socket.get_socket();
+}
+
 jsonrpcpp::entity_ptr H9Connector::recv() {
     nlohmann::json json;
     int res = h9socket.recv_complete_msg(json);

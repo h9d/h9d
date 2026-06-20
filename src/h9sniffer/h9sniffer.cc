@@ -117,6 +117,14 @@ int main(int argc, char** argv) {
     h9.logger_setup();
     h9.load_configuration();
 
+    if (h9.extended && h9.get_scheme() == h9.H9D_SCHEME) {
+        H9Connector& h9_connector = h9.get_connector();
+        h9_connector.connect(h9.get_userinfo());
+
+        //TODO: dodac ladowanie node desc
+
+    }
+
     std::unique_ptr<BusDriver> bus;
 
     try {
@@ -143,11 +151,13 @@ int main(int argc, char** argv) {
         output = 2;
     }
 
+
     while (true) {
         H9Frame frame;
         try {
-            if (bus->recv_frame(frame) <= BusDriver::SOCKET_CLOSE)
+            if (bus->recv_frame(frame) <= BusDriver::SOCKET_CLOSE) {
                 continue;
+            }
         } catch (std::system_error& e) {
             SPDLOG_ERROR("Messages receiving error: {}.", e.code().message());
             exit(EXIT_FAILURE);
