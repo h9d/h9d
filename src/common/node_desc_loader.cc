@@ -14,7 +14,21 @@
 
 #include "spdlog/spdlog.h"
 #include "libconfuse_helper.h"
+#include <h9def.h>
 
+
+const std::map<std::uint16_t, NodeDescLoader::RegisterDesc> NodeDescLoader::std_register = {
+    {NODE_TYPE_STD_REGISTER,              {NODE_TYPE_STD_REGISTER,              "Node type",              "uint", 16, true,  false, {}, ""}},
+    {NODE_HARDWARE_REVISION_STD_REGISTER, {NODE_HARDWARE_REVISION_STD_REGISTER, "Node hardware revision", "char",  8, true,  false, {}, ""}},
+    {NODE_VERSION_STD_REGISTER,           {NODE_VERSION_STD_REGISTER,           "Node version",           "uint", 48, true,  false, {}, ""}},
+    {NODE_BUILD_INFO_STD_REGISTER,        {NODE_BUILD_INFO_STD_REGISTER,        "Build metadata",         "str",  48, true,  false, {}, ""}},
+    {NODE_MCU_TYPE_STD_REGISTER,          {NODE_MCU_TYPE_STD_REGISTER,          "MCU type",               "uint",  8, true,  false, {}, ""}},
+    {NODE_SN_STD_REGISTER,                {NODE_SN_STD_REGISTER,                "MCU SN",                 "uint", 32, true,  false, {}, ""}},
+    {NODE_RESET_REASON_STD_REGISTER,      {NODE_RESET_REASON_STD_REGISTER,      "Node reset reason",      "uint",  8, true,  false, {}, ""}},
+    {NODE_POWER_SUPPLY_STD_REGISTER,      {NODE_POWER_SUPPLY_STD_REGISTER,      "Power supply",           "uint",  32, true,  false, {}, ""}},
+    {NODE_MCU_TEMP_STD_REGISTER,          {NODE_MCU_TEMP_STD_REGISTER,          "MCU temperature",        "uint",  32, true,  false, {}, ""}},
+    {NODE_ID_STD_REGISTER,                {NODE_ID_STD_REGISTER,                "Node id",                "uint",  8, true,  true,  {}, ""}},
+};
 
 static int cfg_include_wrapper(cfg_t *cfg, cfg_opt_t *opt, int argc, const char **argv) {
     if (!cfg || !argv) {
@@ -143,6 +157,8 @@ void NodeDescLoader::load_file(const std::string& nodes_desc_file) {
     cfg_set_validate_func(cfg, "node_type", confuse_helpers::validate_node_type_sec);
     cfg_set_validate_func(cfg, "node_type|register",confuse_helpers::validate_node_register_number_sec);
 
+    SPDLOG_INFO("Loading nodes description file: {}", nodes_desc_file);
+
     int ret = cfg_parse(cfg, nodes_desc_file.c_str());
 
     if (ret == CFG_FILE_ERROR) {
@@ -196,6 +212,26 @@ void NodeDescLoader::reload() {
     types.clear();
 
     load_file(_nodes_desc_file);
+}
+
+const NodeDescLoader::NodeDesc* NodeDescLoader::find_by_type(std::uint16_t type) const {
+    auto it = types.find(type);
+    return it != types.end() ? &it->second : nullptr;
+}
+
+const NodeDescLoader::RegisterDesc* NodeDescLoader::find_register(std::uint16_t node_type, std::uint8_t reg_num) const {
+    if (reg_num < NODE_STD_REGISTER_LAST) {
+        auto it = std_register.find(reg_num);
+        return it != std_register.end() ? &it->second : nullptr;
+    }
+    auto type_it = types.find(node_type);
+    if (type_it == types.end()) return nullptr;
+    auto reg_it = type_it->second.registers.find(reg_num);
+    return reg_it != type_it->second.registers.end() ? &reg_it->second : nullptr;
+}
+
+const std::map<std::uint16_t, NodeDescLoader::RegisterDesc> NodeDescLoader::get_node_std_registers() {
+    return std_register;
 }
 
 std::string NodeDescLoader::get_node_name_by_type(std::uint16_t type) {

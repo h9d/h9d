@@ -91,6 +91,7 @@ H9Configurator::H9Configurator(const std::string& app_name, const std::string& a
     host = "";
     port = -1;
     source_id = default_source_id;
+
 }
 
 cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** argv) {
@@ -150,10 +151,11 @@ cxxopts::ParseResult H9Configurator::parse_command_line_arg(int argc, char** arg
 void H9Configurator::load_configuration() {
     cfg_opt_t cfg_connection_opts[] = {
         CFG_STR("uri", nullptr, CFGF_NONE | CFGF_NODEFAULT),
-        CFG_INT("SourceID", 0, CFGF_NONE | CFGF_NODEFAULT),
+        CFG_INT("source_id", 0, CFGF_NONE | CFGF_NODEFAULT),
         CFG_END()};
     cfg_opt_t cfg_opts[] = {
-        CFG_INT("DefaultSourceID", default_source_id, CFGF_NONE),
+        CFG_STR("nodes_description", nullptr, CFGF_NONE),
+        CFG_INT("default_source_id", default_source_id, CFGF_NONE),
         CFG_STR("default", nullptr, CFGF_NONE | CFGF_NODEFAULT),
         CFG_SEC("connection", cfg_connection_opts, CFGF_MULTI | CFGF_TITLE),
         CFG_END()};
@@ -161,7 +163,7 @@ void H9Configurator::load_configuration() {
     cfg = cfg_init(cfg_opts, CFGF_NONE);
 
     cfg_set_error_function(cfg, cfg_err_func);
-    cfg_set_validate_func(cfg, "DefaultSourceID", confuse_helpers::validate_node_id);
+    cfg_set_validate_func(cfg, "default_source_id", confuse_helpers::validate_node_id);
 
     std::error_code ec;
     int result = CFG_SUCCESS;
@@ -217,7 +219,11 @@ void H9Configurator::load_configuration() {
     if (cfg) {
         SPDLOG_INFO("Loading configuration from '{}' file.", config_file);
 
-        source_id = cfg_getint(cfg, "DefaultSourceID");
+        source_id = cfg_getint(cfg, "default_source_id");
+
+        if (cfg_getstr(cfg, "nodes_description") && node_description_file.empty()) {
+            node_description_file = cfg_getstr(cfg, "nodes_description");
+        }
 
         if (connection_uri.empty()) {
             if (tmp_uri_con.empty() && cfg_size(cfg, "default")) {
@@ -227,8 +233,8 @@ void H9Configurator::load_configuration() {
             for (int i = 0; i < cfg_size(cfg, "connection"); i++) {
                 cfg_t* h9d_sec = cfg_getnsec(cfg, "connection", i);
                 if (tmp_uri_con == cfg_title(h9d_sec)) {
-                    if (cfg_size(h9d_sec, "SourceID")) {
-                        source_id = cfg_getint(h9d_sec, "SourceID");
+                    if (cfg_size(h9d_sec, "source_id")) {
+                        source_id = cfg_getint(h9d_sec, "source_id");
                     }
                     if (cfg_size(h9d_sec, "uri")) {
                         connection_uri = cfg_getstr(h9d_sec, "uri");

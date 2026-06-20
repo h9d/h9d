@@ -170,7 +170,7 @@ int NodeMgr::response_timeout_duration() const {
 }
 
 int NodeMgr::discover() {
-    H9Frame frame("h9d", H9Frame::Type::DISCOVER, H9Frame::BROADCAST_ID);
+    H9Frame frame("h9d", H9Frame::Type::DISCOVER, H9Frame::BROADCAST_ALL_GROUP);
 
     return bus->send_frame(frame);
 }

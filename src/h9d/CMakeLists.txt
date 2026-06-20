@@ -17,7 +17,6 @@ add_executable(h9d
     raw_node.cc raw_node.h
     node_mgr.cc node_mgr.h
     node.cc node.h
-    node_desc_loader.cc node_desc_loader.h
     virtual_endpoint.cc virtual_endpoint.h
     virtual_py_node.cc virtual_py_node.h
     py_h9.cc py_h9.h

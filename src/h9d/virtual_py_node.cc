@@ -186,7 +186,7 @@ VirtualPyNode::~VirtualPyNode() {
 
 void VirtualPyNode::on_frame(const H9Frame& frame) {
     //TODO: poprawic obsluge standardowych rejestrow i operacji jak w bibliotece h9can
-    if (frame.type() == H9Frame::Type::DISCOVER && (frame.broadcast_group() == node_type || frame.broadcast_group() == H9Frame::BROADCAST_ID)) {
+    if (frame.type() == H9Frame::Type::DISCOVER && (frame.broadcast_group() == node_type || frame.broadcast_group() == H9Frame::BROADCAST_ALL_GROUP)) {
         H9Frame res;
         res.type(H9Frame::Type::NODE_INFO);
         res.source_id(node_id);
@@ -195,7 +195,7 @@ void VirtualPyNode::on_frame(const H9Frame& frame) {
         res.data({static_cast<uint8_t>((node_type >> 8) & 0xff), static_cast<uint8_t>((node_type)&0xff), (VERSION_MAJOR >> 8), VERSION_MAJOR & 0xff, (VERSION_MINOR >> 8) & 0xff, VERSION_MINOR & 0xff, 0, 0});
         send_frame(frame);
     }
-    else if (frame.type() == H9Frame::Type::NODE_RESET && (frame.broadcast_group() == node_type || frame.broadcast_group() == H9Frame::BROADCAST_ID)) {
+    else if (frame.type() == H9Frame::Type::NODE_RESET && (frame.broadcast_group() == node_type || frame.broadcast_group() == H9Frame::BROADCAST_ALL_GROUP)) {
         reset();
         return;
     }

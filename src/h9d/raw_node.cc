@@ -241,7 +241,7 @@ ssize_t RawNode::set_reg(const std::string& origin, std::uint8_t reg, std::size_
     FramePromise* frame_promise = create_frame_promise(comparator);
 
     std::vector<std::uint8_t> data = {reg};
-    data.insert(data.end(), reg_val, &reg_val[length + 1]);
+    data.insert(data.end(), reg_val, &reg_val[length]);
 
     H9Frame req(origin, H9Frame::Type::SET_REG, H9Frame::Flags::SINGE_FRAME, _node_id, data);
 

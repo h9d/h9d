@@ -74,14 +74,9 @@ void Node::load_description() {
 
     register_map.clear();
 
-    register_map[NODE_TYPE_STD_REGISTER] = {NODE_TYPE_STD_REGISTER, "Node type", "uint", 16, true, false, {}, ""};
-    register_map[NODE_HARDWARE_REVISION_STD_REGISTER] = {NODE_HARDWARE_REVISION_STD_REGISTER, "Node hardware revision", "char", 8, true, false, {}, ""};
-    register_map[NODE_VERSION_STD_REGISTER] = {NODE_VERSION_STD_REGISTER, "Node version", "uint", 32, true, false, {}, ""};
-    register_map[NODE_BUILD_INFO_STD_REGISTER] = {NODE_BUILD_INFO_STD_REGISTER, "Build metadata", "str", 48, true, false, {}, ""};
-    register_map[NODE_ID_STD_REGISTER] = {NODE_ID_STD_REGISTER, "Node id", "uint", 9, true, true, {}, ""};
-    register_map[NODE_MCU_TYPE_STD_REGISTER] = {NODE_MCU_TYPE_STD_REGISTER, "MCU type", "uint", 8, true, false, {}, ""};
-    register_map[NODE_SN_STD_REGISTER] = {NODE_SN_STD_REGISTER, "MCU SN", "uint", 32, true, false, {}, ""};
-    register_map[NODE_RESET_REASON_STD_REGISTER] = {NODE_RESET_REASON_STD_REGISTER, "Node reset reason", "uint", 8, true, false, {}, ""};
+    for (const auto& it : NodeDescLoader::get_node_std_registers()) {
+        register_map[it.first] = {it.second.number, it.second.name, it.second.type, it.second.size, it.second.readable, it.second.writable, it.second.bits_names, it.second.description};
+    }
 
     for (const auto& it : nodedescloader.get_node_register_by_type(_node_type)) {
         register_map[it.first] = {it.second.number, it.second.name, it.second.type, it.second.size, it.second.readable, it.second.writable, it.second.bits_names, it.second.description};

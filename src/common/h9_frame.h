@@ -75,7 +75,7 @@ class H9Frame {
         REGISTER_SIZE_MISMATCH = H9FRAME_ERROR_REGISTER_SIZE_MISMATCH,
     };
 
-    constexpr static std::uint16_t BROADCAST_ID = H9FRAME_BROADCAST_ID;
+    constexpr static std::uint16_t BROADCAST_ALL_GROUP = H9FRAME_BROADCAST_ALL_GROUP;
 
     constexpr static int MAX_DATA_LENGTH = 8;
     constexpr static int SERIALIZATION_LENGTH = 4 + 1 + MAX_DATA_LENGTH;

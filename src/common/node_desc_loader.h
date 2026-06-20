@@ -38,13 +38,20 @@ class NodeDescLoader {
     cfg_t* cfg;
     std::map<std::uint16_t, NodeDesc> types;
     std::string _nodes_desc_file;
+
+    static const std::map<std::uint16_t, RegisterDesc> std_register;
   public:
     NodeDescLoader();
     ~NodeDescLoader();
     void load_file(const std::string& nodes_desc_file);
     void reload();
 
+    const NodeDesc* find_by_type(std::uint16_t type) const;
+    const RegisterDesc* find_register(std::uint16_t node_type, std::uint8_t reg_num) const;
+
     std::string get_node_name_by_type(std::uint16_t type);
     std::string get_node_description_by_type(std::uint16_t type);
     std::map<std::uint16_t, RegisterDesc> get_node_register_by_type(std::uint16_t type);
+
+    static const std::map<std::uint16_t, RegisterDesc>  get_node_std_registers();
 };

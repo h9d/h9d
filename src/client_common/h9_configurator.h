@@ -50,6 +50,7 @@ class H9Configurator {
 
     std::string config_file;
     int source_id;
+    std::string node_description_file;
 
     static bool is_uri(const std::string&);
     void parse_uri(const std::string& uri);
