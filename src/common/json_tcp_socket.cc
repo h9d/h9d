@@ -6,28 +6,28 @@
  * Copyright (C) 2020-2023 Kamil Palkowski. All rights reserved.
  */
 
-#include "h9msgsocket.h"
+#include "json_tcp_socket.h"
 
 #include <jsonrpcpp/jsonrpcpp.hpp>
 #include <sys/errno.h>
 #include <sys/socket.h>
 #include <system_error>
 
-H9MsgSocket::H9MsgSocket(int socket):
-    H9Socket(socket) {
+JSONTCPSocket::JSONTCPSocket(int socket):
+    TCPSocket(socket) {
     if (connect() < 0)
         throw std::system_error(errno, std::generic_category(), __FILE__ + std::string(":") + std::to_string(__LINE__));
 }
 
-H9MsgSocket::H9MsgSocket(std::string hostname, std::string port) noexcept:
-    H9Socket(std::move(hostname), std::move(port)) {
+JSONTCPSocket::JSONTCPSocket(std::string hostname, std::string port) noexcept:
+    TCPSocket(std::move(hostname), std::move(port)) {
 }
 
-int H9MsgSocket::get_socket() noexcept {
+int JSONTCPSocket::get_socket() noexcept {
     return _socket;
 }
 
-int H9MsgSocket::authentication(const std::string& entity) {
+int JSONTCPSocket::authentication(const std::string& entity) {
     jsonrpcpp::Id id(1);
 
     jsonrpcpp::Request r(id, "authenticate", nlohmann::json({{"entity", entity}}));
@@ -62,20 +62,20 @@ int H9MsgSocket::authentication(const std::string& entity) {
     return 0;
 }
 
-int H9MsgSocket::send(const nlohmann::json& json) noexcept {
-    return H9Socket::send(json.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
+int JSONTCPSocket::send(const nlohmann::json& json) noexcept {
+    return TCPSocket::send(json.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
 }
 
-int H9MsgSocket::recv(nlohmann::json& json, int timeout_in_seconds) noexcept {
+int JSONTCPSocket::recv(nlohmann::json& json, int timeout_in_seconds) noexcept {
     std::string raw_str;
-    int res = H9Socket::recv(raw_str, timeout_in_seconds);
+    int res = TCPSocket::recv(raw_str, timeout_in_seconds);
     if (res > 0) {
         json = std::move(nlohmann::json::parse(std::move(raw_str), nullptr, false));
     }
     return res;
 }
 
-int H9MsgSocket::recv_complete_msg(nlohmann::json& json) noexcept {
+int JSONTCPSocket::recv_complete_msg(nlohmann::json& json) noexcept {
     while (true) {
         int res = recv(json, 0);
         if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
@@ -87,6 +87,6 @@ int H9MsgSocket::recv_complete_msg(nlohmann::json& json) noexcept {
     }
 }
 
-void H9MsgSocket::shutdown_read() noexcept {
+void JSONTCPSocket::shutdown_read() noexcept {
     shutdown(_socket, SHUT_RD);
 }

@@ -13,11 +13,11 @@
 #include <jsonrpcpp/jsonrpcpp.hpp>
 #include <nlohmann/json.hpp>
 
-#include "h9msgsocket.h"
+#include "json_tcp_socket.h"
 
 class H9Connector {
   private:
-    H9MsgSocket h9socket;
+    JSONTCPSocket h9socket;
     int next_msg_id;
   public:
     H9Connector(std::string hostname, std::string port) noexcept;

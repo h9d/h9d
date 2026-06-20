@@ -10,24 +10,24 @@
 
 #include "config.h"
 #include <string>
-#include "h9socket.h"
+#include "tcp_socket.h"
 #include <nlohmann/json.hpp>
 
 
-class H9MsgSocket: protected H9Socket {
-    //TODO: zmienic nazwe na json_socket, ogarnac bledy, szczegolnie z parsowaniem jsona
-    //TODO: H9MsgSocket i authentication moga zrzucac wyjatki, moze przerobic to na retval? albo dedykowany typ bo moga am byc wyjatki z parsera jsona (authentication)
+class JSONTCPSocket: protected TCPSocket {
+    //TODO: ogarnac bledy, szczegolnie z parsowaniem jsona
+    //TODO: JSONTCPSocket i authentication moga zrzucac wyjatki, moze przerobic to na retval? albo dedykowany typ bo moga am byc wyjatki z parsera jsona (authentication)
 public:
-    explicit H9MsgSocket(int socket);
-    H9MsgSocket(std::string hostname, std::string port) noexcept;
+    explicit JSONTCPSocket(int socket);
+    JSONTCPSocket(std::string hostname, std::string port) noexcept;
 
-    H9MsgSocket(const H9MsgSocket&) = delete;
-    H9MsgSocket(H9MsgSocket&&) = delete;
-    H9MsgSocket &operator=(const H9MsgSocket&) = delete;
+    JSONTCPSocket(const JSONTCPSocket&) = delete;
+    JSONTCPSocket(JSONTCPSocket&&) = delete;
+    JSONTCPSocket &operator=(const JSONTCPSocket&) = delete;
 
     int get_socket() noexcept;
 
-    using H9Socket::connect;
+    using TCPSocket::connect;
     int authentication(const std::string& entity);
 
     int send(const nlohmann::json &json) noexcept;
@@ -45,9 +45,9 @@ public:
     /// @retval 1 on successful
     int recv_complete_msg(nlohmann::json &json) noexcept;
 
-    using H9Socket::close;
+    using TCPSocket::close;
     void shutdown_read() noexcept;
 
-    using H9Socket::get_remote_address;
-    using H9Socket::get_remote_port;
+    using TCPSocket::get_remote_address;
+    using TCPSocket::get_remote_port;
 };

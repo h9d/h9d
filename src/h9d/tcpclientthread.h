@@ -19,7 +19,7 @@
 
 #include "api.h"
 #include "client_frame_obs.h"
-#include "h9msgsocket.h"
+#include "json_tcp_socket.h"
 #if (defined(__unix__) && defined(BSD)) || defined(__APPLE__) && defined(__MACH__)
 #include "kqueue.h"
 #elif defined(__linux__)
@@ -34,7 +34,7 @@ class TCPServer;
 class TCPClientThread {
   private:
     std::shared_ptr<spdlog::logger> logger;
-    H9MsgSocket h9socket;
+    JSONTCPSocket h9socket;
 
     API* api;
     TCPServer* server;

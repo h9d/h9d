@@ -6,7 +6,7 @@
  * Copyright (C) 2019-2023 Kamil Palkowski. All rights reserved.
  */
 
-#include "h9socket.h"
+#include "tcp_socket.h"
 
 #include <system_error>
 #include <cstring>
@@ -20,7 +20,7 @@
 #include <netdb.h>
 
 
-H9Socket::H9Socket() noexcept {
+TCPSocket::TCPSocket() noexcept {
     _socket = -1;
     bytes_to_recv = sizeof(header_buf);
     recv_bytes = 0;
@@ -29,24 +29,24 @@ H9Socket::H9Socket() noexcept {
     data_buf = (char*)malloc((data_buf_len + 1) * sizeof(char));
 }
 
-H9Socket::H9Socket(int socket) noexcept: H9Socket() {
+TCPSocket::TCPSocket(int socket) noexcept: TCPSocket() {
     _socket = socket;
     _hostname.erase();
     _port.erase();
 }
 
-H9Socket::H9Socket(std::string hostname, std::string port) noexcept: H9Socket() {
+TCPSocket::TCPSocket(std::string hostname, std::string port) noexcept: TCPSocket() {
     _hostname = std::move(hostname);
     _port = std::move(port);
 }
 
-H9Socket::~H9Socket() noexcept {
+TCPSocket::~TCPSocket() noexcept {
     close();
     data_buf_len = 0;
     free(data_buf);
 }
 
-int H9Socket::connect() noexcept {
+int TCPSocket::connect() noexcept {
     int ret = 0;
     if(_socket > -1) {
         struct sockaddr_storage addr;
@@ -114,12 +114,12 @@ int H9Socket::connect() noexcept {
     return 0;
 }
 
-void H9Socket::close() noexcept {
+void TCPSocket::close() noexcept {
     if (_socket > -1) ::close(_socket);
     _socket = -1;
 }
 
-int H9Socket::recv(std::string& buf, int timeout_in_seconds) noexcept {
+int TCPSocket::recv(std::string& buf, int timeout_in_seconds) noexcept {
     if (timeout_in_seconds) {
         struct timeval tv;
         tv.tv_sec = timeout_in_seconds;
@@ -179,7 +179,7 @@ int H9Socket::recv(std::string& buf, int timeout_in_seconds) noexcept {
     return 1;
 }
 
-int H9Socket::send(const std::string& buf) noexcept {
+int TCPSocket::send(const std::string& buf) noexcept {
     std::uint32_t header = htonl(buf.size());
 
     int send_flags = 0;
@@ -206,10 +206,10 @@ int H9Socket::send(const std::string& buf) noexcept {
     return 1;
 }
 
-std::string H9Socket::get_remote_address() const noexcept {
+std::string TCPSocket::get_remote_address() const noexcept {
     return _hostname;
 }
 
-std::string H9Socket::get_remote_port() const noexcept {
+std::string TCPSocket::get_remote_port() const noexcept {
     return _port;
 }

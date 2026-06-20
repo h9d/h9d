@@ -1,7 +1,7 @@
 add_library(CommonLib STATIC
     h9_frame.cc h9_frame.h
-    h9socket.cc h9socket.h
-    h9msgsocket.cc h9msgsocket.h
+    tcp_socket.cc tcp_socket.h
+    json_tcp_socket.cc json_tcp_socket.h
     fmt_helpers.cc fmt_helpers.h
     libconfuse_helper.cc libconfuse_helper.h)
 

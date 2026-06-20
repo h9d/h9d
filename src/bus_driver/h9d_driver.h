@@ -7,10 +7,10 @@
 #pragma once
 
 #include "bus_driver.h"
-#include "h9msgsocket.h"
+#include "json_tcp_socket.h"
 
 /**
- * @brief H9D driver – connection to another h9d daemon instance via H9MsgSocket.
+ * @brief H9D driver – connection to another h9d daemon instance via JSONTCPSocket.
  *
  * Enables cascading h9d instances: one daemon can act as a client of another,
  * forwarding and receiving frames through the H9 message protocol.
@@ -18,7 +18,7 @@
  */
 class H9DDriver: public BusDriver {
   private:
-    H9MsgSocket h9socket;
+    JSONTCPSocket h9socket;
     int next_msg_id;
     std::string entity;
   public:
