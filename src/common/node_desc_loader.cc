@@ -15,6 +15,7 @@
 #include "spdlog/spdlog.h"
 #include "libconfuse_helper.h"
 #include <h9def.h>
+#include <fmt/chrono.h>
 
 
 const std::map<std::uint16_t, NodeDescLoader::RegisterDesc> NodeDescLoader::std_register = {
@@ -122,6 +123,7 @@ NodeDescLoader::NodeDescLoader():
 NodeDescLoader::~NodeDescLoader() {
     if (cfg) {
         cfg_free(cfg);
+        cfg = nullptr;
     }
 }
 
@@ -164,11 +166,13 @@ void NodeDescLoader::load_file(const std::string& nodes_desc_file) {
     if (ret == CFG_FILE_ERROR) {
         SPDLOG_ERROR("Nodes description file ({}) - file error", nodes_desc_file.c_str());
         cfg_free(cfg);
+        cfg = nullptr;
         return;
     }
     else if (ret == CFG_PARSE_ERROR) {
         SPDLOG_ERROR("Nodes description file ({}) - parse error", nodes_desc_file.c_str());
         cfg_free(cfg);
+        cfg = nullptr;
         return;
     }
 
@@ -207,6 +211,7 @@ void NodeDescLoader::load_file(const std::string& nodes_desc_file) {
 void NodeDescLoader::reload() {
     if (cfg) {
         cfg_free(cfg);
+        cfg = nullptr;
     }
 
     types.clear();

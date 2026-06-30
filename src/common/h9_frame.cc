@@ -424,6 +424,8 @@ const char* H9Frame::reset_reason_to_string(std::uint8_t reset_reason) {
             return "brown out";
         case NODE_RESET_BY_EXTERNAL_SOURCE:
             return "external source";
+        case NODE_RESET_BY_SOFTWARE:
+            return "software";
     }
     return "UNKNOWN";
 }

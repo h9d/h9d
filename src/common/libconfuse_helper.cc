@@ -56,6 +56,8 @@ int validate_node_register_type(cfg_t* cfg, cfg_opt_t* opt) {
         return 0;
     else if (strcmp(type, "float") == 0)
         return 0;
+    else if (strcmp(type, "blob") == 0)
+        return 0;
     cfg_error(cfg, "invalid value for option '%s' in section '%s': %s", opt->name, cfg->name, type);
     return -1;
 }
@@ -63,7 +65,7 @@ int validate_node_register_type(cfg_t* cfg, cfg_opt_t* opt) {
 int validate_node_register_size(cfg_t* cfg, cfg_opt_t* opt) {
     auto size = cfg_opt_getnint(opt, cfg_opt_size(opt) - 1);
 
-    if (size < 0 || size > 6 * 8) {
+    if (size < 0 || size > 256 * 6 * 8) {
         cfg_error(cfg, "option '%s' in section '%s' must have a value less then %d", opt->name, cfg->name, 6 * 8);
         return -1;
     }

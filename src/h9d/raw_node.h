@@ -91,7 +91,7 @@ class RawNode {
   protected:
     NodeMgr* const node_mgr;
 
-    const std::uint16_t _node_id;
+    const std::uint8_t _node_id;
     RawNode(NodeMgr* node_mgr, Bus* bus, std::uint8_t node_id) noexcept;
 
     friend NodeMgr;
@@ -104,19 +104,10 @@ class RawNode {
 
     void on_frame_recv(const H9Frame& frame);
 
-    std::uint16_t node_id() const noexcept;
+    std::uint8_t node_id() const noexcept;
 
     ssize_t reset(const std::string& origin);
-    //ssize_t discovery(const std::string& origin, std::uint16_t& type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision);
-
-    int32_t get_node_type(const std::string& origin) noexcept;
-    int64_t get_node_version(const std::string& origin, std::uint16_t* major = nullptr, std::uint16_t* minor = nullptr, std::uint16_t* patch = nullptr) noexcept;
-    int32_t get_mcu_type(const std::string& origin) noexcept;
-
     void firmware_update(const std::string& origin, void (*progress_callback)(int percentage));
-
-    ssize_t set_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
-    ssize_t clear_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
 
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::size_t length, const std::uint8_t* reg_val, std::uint8_t* reg_after_set = nullptr, ssize_t reg_after_set_length = -1);
     ssize_t set_reg(const std::string& origin, std::uint8_t reg, std::uint8_t reg_val, std::uint8_t* reg_after_set = nullptr);
@@ -137,6 +128,9 @@ class RawNode {
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, std::uint16_t* reg_val);
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, std::uint32_t* reg_val);
     ssize_t get_reg(const std::string& origin, std::uint8_t reg, float* reg_val);
+
+    ssize_t set_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
+    ssize_t clear_bit(const std::string& origin, std::uint8_t reg, std::uint8_t bit, std::size_t length = 0, std::uint8_t* reg_after_set = nullptr);
 
     static int parse_node_info_frame(const H9Frame& frame, std::uint16_t& node_type, std::uint16_t& version_major, std::uint16_t& version_minor, char& hardware_revision, std::uint8_t& reset_reason);
 };

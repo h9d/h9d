@@ -80,11 +80,25 @@ class NodeRegistry {
 } // namespace
 
 void print_reg_value(const H9Frame& frame, const NodeDescLoader::RegisterDesc* reg_desc) {
-    if (frame.dlc() <= 1)
+    bool multi_frame = frame.flags() != H9Frame::Flags::SINGE_FRAME;
+    int multi_frame_offset = multi_frame ? 1 : 0;
+
+    if (frame.dlc() <= 1 + multi_frame_offset)
         return;
 
     const std::uint8_t* d = frame.data();
-    int data_len = frame.dlc() - 1;
+    int data_len = frame.dlc() - 1 - multi_frame_offset;
+
+    if (multi_frame && frame.flags() == H9Frame::Flags::MULTI_FRAME_FIRST) {
+        fmt::print("    total frame: {}\n", d[1]);
+        fmt::print("    frame offset: {}\n", 0);
+    }
+    else if (multi_frame && frame.flags() == H9Frame::Flags::MULTI_FRAME_LAST) {
+        fmt::print("    frame offset: {} (LAST)\n", d[1]);
+    }
+    else if (multi_frame) {
+        fmt::print("    frame offset: {}\n", d[1]);
+    }
 
     // bool bitfield: size is number of bits, bits_names[i] = name of bit i
     if (reg_desc && reg_desc->type == "bool" && reg_desc->size > 1) {
@@ -93,7 +107,7 @@ void print_reg_value(const H9Frame& frame, const NodeDescLoader::RegisterDesc* r
         std::uint32_t bval = 0;
 
         for (int i = 0; i < num_bytes && i < data_len; ++i)
-            bval = (bval << 8) | d[1 + i];
+            bval = (bval << 8) | d[1 + i + multi_frame_offset];
 
         for (int i = num_bits - 1; i >= 0; --i) {
             int bit_val = (bval >> i) & 1;
@@ -105,11 +119,11 @@ void print_reg_value(const H9Frame& frame, const NodeDescLoader::RegisterDesc* r
         return;
     }
 
-    std::cout << "    value: ";
+    fmt::print("    value: ");
     switch (data_len) {
-        case 1: std::cout << static_cast<unsigned int>(d[1]); break;
-        case 2: std::cout << static_cast<unsigned int>((d[1] << 8) | d[2]); break;
-        case 4: std::cout << static_cast<unsigned int>((d[1] << 24) | (d[2] << 16) | (d[3] << 8) | d[4]); break;
+        case 1: std::cout << static_cast<unsigned int>(d[1 + multi_frame_offset]); break;
+        case 2: std::cout << static_cast<unsigned int>((d[1 + multi_frame_offset] << 8) | d[2 + multi_frame_offset]); break;
+        case 4: std::cout << static_cast<unsigned int>((d[1 + multi_frame_offset] << 24) | (d[2 + multi_frame_offset] << 16) | (d[3 + multi_frame_offset] << 8) | d[4 + multi_frame_offset]); break;
         default: break;
     }
 
@@ -117,28 +131,28 @@ void print_reg_value(const H9Frame& frame, const NodeDescLoader::RegisterDesc* r
         if (reg_desc->type == "uint") {
             std::uint32_t uval = 0;
             for (int i = 0; i < data_len && i < 4; ++i)
-                uval = (uval << 8) | d[1 + i];
+                uval = (uval << 8) | d[1 + multi_frame_offset + i];
             fmt::print(" (uint{}: {})", reg_desc->size, uval);
         } else if (reg_desc->type == "bool") {
-            fmt::print(" (bool: {})", d[1] ? "true" : "false");
+            fmt::print(" (bool: {})", d[1 + multi_frame_offset] ? "true" : "false");
         } else if (reg_desc->type == "int") {
             std::int32_t ival = 0;
-            if (data_len >= 1) ival = static_cast<std::int8_t>(d[1]);
-            if (data_len >= 2) ival = static_cast<std::int16_t>((d[1] << 8) | d[2]);
-            if (data_len >= 4) ival = static_cast<std::int32_t>((d[1] << 24) | (d[2] << 16) | (d[3] << 8) | d[4]);
+            if (data_len >= 1) ival = static_cast<std::int8_t>(d[1 + multi_frame_offset]);
+            if (data_len >= 2) ival = static_cast<std::int16_t>((d[1 + multi_frame_offset] << 8) | d[2 + multi_frame_offset]);
+            if (data_len >= 4) ival = static_cast<std::int32_t>((d[1 + multi_frame_offset] << 24) | (d[2 + multi_frame_offset] << 16) | (d[3 + multi_frame_offset] << 8) | d[4 + multi_frame_offset]);
             fmt::print(" (int{}: {})", reg_desc->size, ival);
         } else if (reg_desc->type == "char") {
-            fmt::print(" (char: '{}')", static_cast<char>(d[1]));
+            fmt::print(" (char: '{}')", static_cast<char>(d[1 + multi_frame_offset]));
         } else if (reg_desc->type == "str") {
-            int slen = std::min(data_len, 6);
+            int slen = std::min(data_len, 7);
             fmt::print(" (str: \"");
-            for (int i = 0; i < slen && d[1 + i] != 0; ++i)
-                fmt::print("{}", static_cast<char>(d[1 + i]));
+            for (int i = 0; i < slen && d[1 + multi_frame_offset + i] != 0; ++i)
+                fmt::print("{}", static_cast<char>(d[1 + multi_frame_offset + i]));
             fmt::print("\")");
         } else if (reg_desc->type == "float") {
-            //TODO: poprawic do lotow 4 bajtowych i kopiowanie memory moze byc nie zgodne z kolejnoscia bajtow architektury
+            //TODO: poprawic do floatow 4 bajtowych i kopiowanie memory moze byc nie zgodne z kolejnoscia bajtow architektury
             float fval = 0.0f;
-            std::memcpy(&fval, &d[1], sizeof(float));
+            std::memcpy(&fval, &d[1 + multi_frame_offset], sizeof(float));
             fmt::print(" (float: {:.4f})", fval);
         }
     }
@@ -190,7 +204,7 @@ void print_frame(const H9Frame& frame, const NodeRegistry& registry, const NodeD
     else if (type == H9Frame::Type::NODE_SPECIFIC_BROADCAST0 && frame.broadcast_group() == 6) {
         fmt::print("    atu ref: {:d}\n", (frame.data()[0] << 8 | frame.data()[1]));
         fmt::print("    atu fwd: {:d}\n", (frame.data()[2] << 8 | frame.data()[3]));
-        fmt::print("    swr: {:.2f}\n", (frame.data()[4] << 8 | frame.data()[5]) / 1000.0f);
+        fmt::print("    swr: {:.2f}\n", (frame.data()[4] << 8 | frame.data()[5]) / 100.0f);
         fmt::print("    freq: {:d}\n", (frame.data()[6] << 8 | frame.data()[7]));
     }
 }
@@ -267,9 +281,10 @@ int main(int argc, char** argv) {
             fmt::print("\n");
         } else {
             if (frame.is_unicast()) {
-                fmt::print("{:d} -> {:d} type: {:d} ({}) seqnum: {:d} dlc: {:d} data: ", frame.source_id(), frame.destination_id(),
+                fmt::print("{:d} -> {:d} type: {:d} ({}) flags: {} seqnum: {:d} dlc: {:d} data: ", frame.source_id(), frame.destination_id(),
                     static_cast<unsigned int>(H9Frame::to_underlying(frame.type())),
                     H9Frame::type_to_string(frame.type()),
+                    H9Frame::to_underlying(frame.flags()),
                     frame.seqnum(),
                     frame.dlc());
             }

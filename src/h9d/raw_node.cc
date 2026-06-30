@@ -51,7 +51,7 @@ RawNode::RawNode(NodeMgr* node_mgr, Bus* bus, std::uint8_t node_id) noexcept:
     _node_id(node_id) {
 }
 
-std::uint16_t RawNode::node_id() const noexcept {
+std::uint8_t RawNode::node_id() const noexcept {
     return _node_id;
 }
 
@@ -127,54 +127,54 @@ ssize_t RawNode::reset(const std::string& origin) {
 //     return MALFORMED_FRAME_ERROR;
 // }
 
-int32_t RawNode::get_node_type(const std::string& origin) noexcept {
-    std::uint16_t buf;
-    ssize_t ret = get_reg(origin, NODE_TYPE_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
-    if (ret == 2) {
-        return ntohs(buf);
-    }
-    else if (ret >= 0) {
-        return MALFORMED_FRAME_ERROR;
-    }
-    return ret;
-}
-
-int64_t RawNode::get_node_version(const std::string& origin, std::uint16_t* major, std::uint16_t* minor, std::uint16_t* patch) noexcept {
-    std::uint16_t buf[3];
-    ssize_t ret = get_reg(origin, NODE_VERSION_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
-    if (ret == 6) {
-        std::uint16_t tmp = ntohs(buf[0]);
-        ret = tmp;
-        if (major)
-            *major = tmp;
-
-        tmp = ntohs(buf[1]);
-        ret = (ret << 16) | tmp;
-        if (minor)
-            *minor = tmp;
-
-        tmp = ntohs(buf[2]);
-        ret = (ret << 16) | tmp;
-        if (patch)
-            *patch = tmp;
-    }
-    else if (ret >= 0) {
-        return MALFORMED_FRAME_ERROR;
-    }
-    return ret;
-}
-
-int32_t RawNode::get_mcu_type(const std::string& origin) noexcept {
-    std::uint16_t buf;
-    ssize_t ret = get_reg(origin, NODE_MCU_TYPE_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
-    if (ret == 2) {
-        return ntohs(buf);
-    }
-    else if (ret >= 0) {
-        return MALFORMED_FRAME_ERROR;
-    }
-    return ret;
-}
+// int32_t RawNode::get_node_type(const std::string& origin) noexcept {
+//     std::uint16_t buf;
+//     ssize_t ret = get_reg(origin, NODE_TYPE_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
+//     if (ret == 2) {
+//         return ntohs(buf);
+//     }
+//     else if (ret >= 0) {
+//         return MALFORMED_FRAME_ERROR;
+//     }
+//     return ret;
+// }
+//
+// int64_t RawNode::get_node_version(const std::string& origin, std::uint16_t* major, std::uint16_t* minor, std::uint16_t* patch) noexcept {
+//     std::uint16_t buf[3];
+//     ssize_t ret = get_reg(origin, NODE_VERSION_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
+//     if (ret == 6) {
+//         std::uint16_t tmp = ntohs(buf[0]);
+//         ret = tmp;
+//         if (major)
+//             *major = tmp;
+//
+//         tmp = ntohs(buf[1]);
+//         ret = (ret << 16) | tmp;
+//         if (minor)
+//             *minor = tmp;
+//
+//         tmp = ntohs(buf[2]);
+//         ret = (ret << 16) | tmp;
+//         if (patch)
+//             *patch = tmp;
+//     }
+//     else if (ret >= 0) {
+//         return MALFORMED_FRAME_ERROR;
+//     }
+//     return ret;
+// }
+//
+// int32_t RawNode::get_mcu_type(const std::string& origin) noexcept {
+//     std::uint16_t buf;
+//     ssize_t ret = get_reg(origin, NODE_MCU_TYPE_STD_REGISTER, sizeof(buf), reinterpret_cast<std::uint8_t*>(&buf));
+//     if (ret == 2) {
+//         return ntohs(buf);
+//     }
+//     else if (ret >= 0) {
+//         return MALFORMED_FRAME_ERROR;
+//     }
+//     return ret;
+// }
 
 void RawNode::firmware_update(const std::string& origin, void (*progress_callback)(int percentage)) {
     // TODO: implement frimware update
