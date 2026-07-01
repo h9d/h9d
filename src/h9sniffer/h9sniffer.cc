@@ -201,11 +201,18 @@ void print_frame(const H9Frame& frame, const NodeRegistry& registry, const NodeD
         int err_num = static_cast<int>(frame.data()[0]);
         std::cout << "    error: " << err_num << " - " << H9Frame::error_to_string(H9Frame::from_underlying<H9Frame::Error>(err_num)) << std::endl;
     }
-    else if (type == H9Frame::Type::NODE_SPECIFIC_BROADCAST0 && frame.broadcast_group() == 6) {
+    else if (type == H9Frame::Type::NODE_SPECIFIC_BROADCAST6 && frame.broadcast_group() == 6) {
         fmt::print("    atu ref: {:d}\n", (frame.data()[0] << 8 | frame.data()[1]));
         fmt::print("    atu fwd: {:d}\n", (frame.data()[2] << 8 | frame.data()[3]));
-        fmt::print("    swr: {:.2f}\n", (frame.data()[4] << 8 | frame.data()[5]) / 100.0f);
-        fmt::print("    freq: {:d}\n", (frame.data()[6] << 8 | frame.data()[7]));
+        fmt::print("    freq: {:d}\n", (frame.data()[4] << 8 | frame.data()[5]));
+        fmt::print("    swr: {:.2f}\n", (frame.data()[6] << 8 | frame.data()[7]) / 100.0f);
+    }
+    else if (type == H9Frame::Type::NODE_SPECIFIC_BROADCAST7 && frame.broadcast_group() == 6) {
+        fmt::print("    atu ref: {:d}\n", (frame.data()[0] << 8 | frame.data()[1]));
+        fmt::print("    atu fwd: {:d}\n", (frame.data()[2] << 8 | frame.data()[3]));
+        fmt::print("    freq: {:d}\n", (frame.data()[4] << 8 | frame.data()[5]));
+        fmt::print("    l: {:d}\n", frame.data()[6]);
+        fmt::print("    c: {:d}\n", frame.data()[7]);
     }
 }
 
