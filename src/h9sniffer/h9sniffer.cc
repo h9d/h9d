@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <spdlog/spdlog.h>
 #include <string>
 
@@ -31,6 +32,8 @@ class H9SnifferConfigurator: public H9Configurator {
                 ("e,extended", "Extended output")
                 ("s,simple", "Simple output")
                 ("n,nodes-desc", "Nodes description file", cxxopts::value<std::string>())
+                ("t,type", "Show only frames of given type(s) (numeric, can be repeated)", cxxopts::value<std::vector<int>>())
+                ("i,source-id", "Show only frames from given source_id(s) (can be repeated)", cxxopts::value<std::vector<int>>())
                 ;
         // clang-format on
     }
@@ -40,11 +43,19 @@ class H9SnifferConfigurator: public H9Configurator {
         simple = result.count("simple");
         if (result.count("nodes-desc"))
             node_description_file = result["nodes-desc"].as<std::string>();
+        if (result.count("type"))
+            for (int v : result["type"].as<std::vector<int>>())
+                filter_types.insert(static_cast<std::uint8_t>(v));
+        if (result.count("source-id"))
+            for (int v : result["source-id"].as<std::vector<int>>())
+                filter_source_ids.insert(static_cast<std::uint8_t>(v));
     }
 
   public:
     bool extended;
     bool simple;
+    std::set<std::uint8_t> filter_types;
+    std::set<std::uint8_t> filter_source_ids;
     using H9Configurator::node_description_file;
 
     H9SnifferConfigurator():
@@ -89,17 +100,18 @@ void print_reg_value(const H9Frame& frame, const NodeDescLoader::RegisterDesc* r
     const std::uint8_t* d = frame.data();
     int data_len = frame.dlc() - 1 - multi_frame_offset;
 
-    if (multi_frame && frame.flags() == H9Frame::Flags::MULTI_FRAME_FIRST) {
-        fmt::print("    total frame: {}\n", d[1]);
-        fmt::print("    frame offset: {}\n", 0);
+    if ( frame.is_unicast() ) {
+        if (multi_frame && frame.flags() == H9Frame::Flags::MULTI_FRAME_FIRST) {
+            fmt::print("    total frame: {}\n", d[1]);
+            fmt::print("    frame offset: {}\n", 0);
+        }
+        else if (multi_frame && frame.flags() == H9Frame::Flags::MULTI_FRAME_LAST) {
+            fmt::print("    frame offset: {} (LAST)\n", d[1]);
+        }
+        else if (multi_frame) {
+            fmt::print("    frame offset: {}\n", d[1]);
+        }
     }
-    else if (multi_frame && frame.flags() == H9Frame::Flags::MULTI_FRAME_LAST) {
-        fmt::print("    frame offset: {} (LAST)\n", d[1]);
-    }
-    else if (multi_frame) {
-        fmt::print("    frame offset: {}\n", d[1]);
-    }
-
     // bool bitfield: size is number of bits, bits_names[i] = name of bit i
     if (reg_desc && reg_desc->type == "bool" && reg_desc->size > 1) {
         int num_bits = reg_desc->size;
@@ -276,6 +288,11 @@ int main(int argc, char** argv) {
         }
 
         node_registry.update(frame);
+
+        if (!h9.filter_types.empty() && !h9.filter_types.count(H9Frame::to_underlying(frame.type())))
+            continue;
+        if (!h9.filter_source_ids.empty() && !h9.filter_source_ids.count(frame.source_id()))
+            continue;
 
         if (output == 0) {
             if (frame.is_unicast())
